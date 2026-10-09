@@ -120,6 +120,7 @@ const PATHS = {
   leaf:'<path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/>',
   activity:'<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
   eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>',
+  eyeOff:'<path d="M3 3l18 18"/><path d="M10.6 5.1A9.7 9.7 0 0 1 12 5c6.5 0 10 7 10 7a17.4 17.4 0 0 1-3.3 4M6.2 6.3C3.5 8 2 12 2 12s3.5 7 10 7a9.6 9.6 0 0 0 4.1-.9"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
   feather:'<path d="M20.24 12.24a6 6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/><path d="M16 8 2 22M17.5 15H9"/>',
   spa:'<path d="M12 22c4-3 6-6 6-10a6 6 0 0 0-12 0c0 4 2 7 6 10z"/><path d="M12 10c0-3 2-5 5-6M12 10c0-3-2-5-5-6"/>',
   wine2:'',
@@ -999,7 +1000,21 @@ function renderTopbar(){
         <span class="ico-moon">${icon('moon')}</span><span class="ico-sun">${icon('sun')}</span>
       </button>
       <button class="icon-btn" data-action="open-ai" title="Ask Aves">${icon('sparkles')}</button>
-      <button class="tb-avatar"><span class="av">AL</span><span class="tb-av-name">Alexandre<small>GM</small></span></button>
+      <div style="position:relative">
+        <button class="tb-avatar" data-action="open-user" title="Account">
+          <span class="av">${AUTH.initials}</span><span class="tb-av-name">${AUTH.firstName}<small>${AUTH.current?AUTH.current.role:''}</small></span>
+        </button>
+        <div class="drop" id="user-drop" hidden>
+          <div class="drop-head"><b>${AUTH.current?AUTH.current.name:''}</b><small>${AUTH.current?AUTH.current.email:''}</small></div>
+          <div class="drop-body">
+            <div class="drop-item" data-action="logout">
+              <span class="di-ic" style="background:var(--crimson-soft);color:var(--crimson)">${icon('logout')}</span>
+              <div style="min-width:0"><b>Sign out</b><p>Lock the dashboard</p></div>
+              <span style="color:var(--faint)">${icon('arrowRight')}</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>`;
 }
 function clockNow(){const d=new Date();return d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});}
@@ -1051,7 +1066,7 @@ VIEWS.overview = () => {
     <div class="hero-inner">
       <div class="hero-copy">
         <div class="eyebrow">${fmtDate(d).toUpperCase()} · ${PROPERTY.location}</div>
-        <h1>${greet}, <em>Alexandre.</em></h1>
+        <h1>${greet}, <em>${AUTH.firstName}.</em></h1>
         <p class="hero-sub">299 guests in residence tonight across <b>342 keys</b> · 42 arrivals and 37 departures choreographed. Aves has prepared <b>3 service actions</b> awaiting your approval.</p>
         <div class="hero-actions">
           <button class="btn-gold" data-action="new-reservation">${icon('plus')}New reservation</button>
@@ -7674,6 +7689,7 @@ function syncModeUI(){
    GLOBAL INTERACTIONS
    ============================================================ */
 document.addEventListener('click',e=>{
+  if(!AUTH.current)return; /* single auth gate: dashboard inert until sign-in */
   const viewLink=e.target.closest('[data-view]');
   if(viewLink){go(viewLink.dataset.view);$('#app').classList.remove('menu-open');closeOverlays();return;}
 
@@ -7753,6 +7769,8 @@ document.addEventListener('click',e=>{
       go(S.view);
       return;
     }
+    else if(a==='open-user'){const d=$('#user-drop');if(d)d.hidden=!d.hidden;$('#notif-drop')&&($('#notif-drop').hidden=true);}
+    else if(a==='logout'){AUTH.logout();location.reload();}
     else if(a==='guest-detail')openGuestDrawer(+actEl.dataset.id);
     else if(a==='mark-all'){$$('#notif-drop .drop-item').forEach(x=>x.style.opacity=.45);$('.ping').style.display='none';toast('All caught up','Notifications marked as read');}
     else if(a==='toast')toast(actEl.dataset.t||'Done',actEl.dataset.s||'','gold');
@@ -7761,23 +7779,135 @@ document.addEventListener('click',e=>{
 });
 
 document.addEventListener('keydown',e=>{
+  if(!AUTH.current)return;
   if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openPalette();}
   if(e.key==='Escape')closeOverlays();
 });
 
 /* ============================================================
-   BOOT
+   AUTH — staff sign-in. Single gate rule: no session, no dashboard.
    ============================================================ */
-(function boot(){
-  const defs=document.createElementNS('http://www.w3.org/2000/svg','svg');
-  defs.setAttribute('width','0');defs.setAttribute('height','0');defs.style.position='absolute';
-  defs.innerHTML=`<defs><linearGradient id="gGold" x1="0" y1="0" x2="1" y2="1">
-    <stop offset="0" stop-color="#8A6B1F"/><stop offset=".45" stop-color="#F2E0AE"/><stop offset="1" stop-color="#B8933F"/></linearGradient></defs>`;
-  $('#app').prepend(defs);
+const AUTH={
+  KEY:'birdos-session-v1',
+  current:null,
+  users:[
+    {email:'gm@birdos.app',  password:'birdos',name:'Alexandre Laurent',role:'General Manager'},
+    {email:'ops@birdos.app', password:'birdos',name:'Priya Nair',       role:'Operations Director'},
+    {email:'fd@birdos.app',  password:'birdos',name:'Marco Bianchi',    role:'Front Office Manager'},
+  ],
+  restore(){
+    try{const raw=localStorage.getItem(this.KEY);this.current=raw?JSON.parse(raw):null;}catch(e){this.current=null;}
+    return this.current;
+  },
+  login(email,password){
+    const u=this.users.find(x=>x.email===String(email||'').trim().toLowerCase()&&x.password===password);
+    if(!u)return null;
+    this.current={name:u.name,email:u.email,role:u.role,at:Date.now()};
+    try{localStorage.setItem(this.KEY,JSON.stringify(this.current));}catch(e){}
+    return this.current;
+  },
+  logout(){this.current=null;try{localStorage.removeItem(this.KEY);}catch(e){}},
+  get firstName(){return this.current?this.current.name.split(' ')[0]:'Staff';},
+  get initials(){return this.current?this.current.name.split(' ').slice(0,2).map(w=>w[0]).join(''):'S';},
+};
 
-  try{const saved=localStorage.getItem('birdos-theme');if(saved)document.documentElement.dataset.theme=saved;}catch(e){}
-  try{const savedMode=localStorage.getItem('birdos-mode');document.documentElement.dataset.mode=savedMode||'classic';}catch(e){document.documentElement.dataset.mode='classic';}
+function showAuthGate(){
+  document.body.style.overflow='hidden';
+  const gate=document.createElement('div');
+  gate.id='auth-gate';
+  gate.innerHTML=`
+    <div class="ag-shell">
+      <img class="ag-img" src="${IMG.exterior}" alt="Aurelia Royal Sands aerial at sunset" />
+      <div class="ag-veil"></div>
+      <div class="ag-grain"></div>
 
+      <div class="ag-top">
+        <div class="ag-brand"><span class="ag-bird">${BIRD}</span><span>BirdOS</span></div>
+        <button class="icon-btn theme-toggle ag-theme" data-ag-theme title="Toggle light / dark theme" type="button">
+          <span class="ico-moon">${icon('moon')}</span><span class="ico-sun">${icon('sun')}</span>
+        </button>
+      </div>
+
+      <div class="ag-stage">
+        <div class="ag-hero">
+          <div class="eyebrow ag-eyebrow">Staff sign-in</div>
+          <h2>The calm operating system for the world&rsquo;s most discerning residences.</h2>
+          <p>Reservations, guest intelligence, self check-in kiosks, revenue and facility orchestration — choreographed in one place.</p>
+          <div class="ag-stats">
+            <div><b>342</b><small>keys live tonight</small></div>
+            <div><b>41</b><small>properties worldwide</small></div>
+            <div><b>24/7</b><small>Aves concierge AI</small></div>
+          </div>
+        </div>
+
+        <form class="ag-card" id="ag-form" novalidate>
+          <span class="ag-mark">${BIRD}</span>
+          <h1>Welcome back</h1>
+          <p class="ag-sub">Sign in to open the BirdOS dashboard.</p>
+
+          <label class="ag-field">
+            <span>Work email</span>
+            <div class="ag-input">${icon('mail')}<input id="ag-email" type="email" inputmode="email" autocomplete="username"
+              placeholder="gm@birdos.app" required /></div>
+          </label>
+          <label class="ag-field">
+            <span>Password</span>
+            <div class="ag-input">${icon('lock')}<input id="ag-pass" type="password" autocomplete="current-password"
+              placeholder="Your password" required />
+              <button class="ag-eye" id="ag-eye" type="button" title="Show password">${icon('eye')}</button>
+            </div>
+          </label>
+
+          <div class="ag-err" id="ag-err" hidden>${icon('shield')}<span></span></div>
+
+          <button class="btn-gold ag-submit" id="ag-go" type="submit">
+            <span class="ag-go-label">Sign in to dashboard</span>${icon('arrowRight')}
+          </button>
+
+          <div class="ag-demo">
+            <small>Demo access · tap to autofill · password <i>birdos</i></small>
+            <div class="ag-accounts">
+              ${AUTH.users.map(u=>`
+                <button type="button" class="ag-acct" data-email="${u.email}">
+                  <span class="ag-acct-ic">${icon('shield')}</span>
+                  <span class="ag-acct-tx"><b>${u.email}</b><small>${u.role}</small></span>
+                </button>`).join('')}
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <div class="ag-foot">Aurelia Royal Sands · Malé Atoll, Indian Ocean — © Aurelia Hospitality · Authorised personnel only</div>
+    </div>`;
+  document.body.appendChild(gate);
+
+  const form=$('#ag-form',gate),email=$('#ag-email',gate),pass=$('#ag-pass',gate),
+        err=$('#ag-err',gate),errSpan=$('span',err),goBtn=$('#ag-go',gate),eye=$('#ag-eye',gate);
+
+  const fail=msg=>{errSpan.textContent=msg;err.hidden=false;form.classList.remove('ag-shake');void form.offsetWidth;form.classList.add('ag-shake');email.focus();};
+
+  form.addEventListener('submit',e=>{
+    e.preventDefault();
+    if(!email.value.trim())return fail('Please enter your work email.');
+    if(!pass.value)return fail('Please enter your password.');
+    goBtn.disabled=true;
+    const u=AUTH.login(email.value,pass.value);
+    if(!u){goBtn.disabled=false;return fail('Invalid credentials. Check your email and password.');}
+    gate.classList.add('ag-leaving');
+    setTimeout(()=>{gate.remove();document.body.style.overflow='';startApp();},380);
+  });
+  eye.addEventListener('click',()=>{
+    const show=pass.type==='password';pass.type=show?'text':'password';
+    eye.innerHTML=icon(show?'eyeOff':'eye');eye.title=show?'Hide password':'Show password';pass.focus();
+  });
+  gate.querySelectorAll('.ag-acct').forEach(b=>b.addEventListener('click',()=>{
+    email.value=b.dataset.email;pass.value='birdos';err.hidden=true;pass.focus();
+  }));
+  $('.ag-theme',gate).addEventListener('click',toggleTheme);
+  setTimeout(()=>email.focus(),60);
+}
+
+function startApp(){
   renderSidebar();renderTopbar();renderPulse();
 
   /* fixed chrome (topbar, pulse strip) is outside the scroll container —
@@ -7790,5 +7920,22 @@ document.addEventListener('keydown',e=>{
   go('overview');
 
   setInterval(()=>{const c=$('#tb-clock');if(c)c.textContent=clockNow();},30000);
-  setTimeout(()=>toast('Welcome back, Alexandre','Aves has prepared your evening briefing','gold'),1200);
+  setTimeout(()=>toast('Welcome back, '+AUTH.firstName,'Aves has prepared your evening briefing','gold'),1200);
+}
+
+/* ============================================================
+   BOOT — restore theme, then enforce the single auth gate
+   ============================================================ */
+(function boot(){
+  const defs=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  defs.setAttribute('width','0');defs.setAttribute('height','0');defs.style.position='absolute';
+  defs.innerHTML=`<defs><linearGradient id="gGold" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#8A6B1F"/><stop offset=".45" stop-color="#F2E0AE"/><stop offset="1" stop-color="#B8933F"/></linearGradient></defs>`;
+  $('#app').prepend(defs);
+
+  /* defaults: Modern design mode + Nuit (dark) theme */
+  try{const saved=localStorage.getItem('birdos-theme');document.documentElement.dataset.theme=saved||'dark';}catch(e){document.documentElement.dataset.theme='dark';}
+  try{const savedMode=localStorage.getItem('birdos-mode');document.documentElement.dataset.mode=savedMode||'modern';}catch(e){document.documentElement.dataset.mode='modern';}
+
+  if(AUTH.restore())startApp();else showAuthGate();
 })();
