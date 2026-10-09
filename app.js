@@ -450,7 +450,7 @@ const VIEW_META = {
   hospitalitytv:['Hospitality TV','Room + public screens · live guide · upsell · PPV · guest services'],
   housekeeping:['Housekeeping & Facilities','Rooms, engineering & smart facilities'],
   floorplan:['3D Floor Plans','Studio · Deluxe · Suite · 1 BHK · ultra-realistic interiors'],
-  facilities:['Facility Management','3D resort map · pool, boardrooms, parking · live staff'],
+  facilities:['Facility Management','3D resort map · pool, aqua park, fitness, spa, beach club · live staff'],
   command:['Command Tower','3D digital twin · live staff & room allocation · day/night'],
   inventory:['Asset Management','Room inventory · 3D interiors · asset register'],
   novotel:['Novotel 3D Twin','Ultra-realistic exterior · 5 floor plans · housekeeping integration'],
@@ -3871,14 +3871,16 @@ const FAC3D=(()=>{
   }
 
   const FACILITIES=[
-    {id:'lobby',name:'Main lobby',type:'Reception',cap:80,occ:28,staff:5,status:'open',pos:[0,0,0],sz:[5,3],color:0x8A7E6E,roles:[['Reception',3],['Concierge',1],['Bell',1]]},
-    {id:'pool',name:'Swimming pool',type:'Recreation',cap:120,occ:74,staff:6,status:'open',pos:[-9,0,-6],sz:[6,4],color:0x2E86AB,roles:[['Lifeguard',2],['Pool attendant',3],['Bartender',1]]},
-    {id:'board',name:'Board rooms',type:'Meetings',cap:40,occ:18,staff:3,status:'open',pos:[0,0,-10],sz:[5,3],color:0x6B7280,roles:[['AV tech',1],['F&B service',2]]},
-    {id:'kids',name:'Kids play area',type:'Recreation',cap:30,occ:12,staff:4,status:'open',pos:[9,0,-6],sz:[4.5,4],color:0xE0A83B,roles:[['Childcare',3],['First-aid',1]]},
-    {id:'parking',name:'Car parking',type:'Infrastructure',cap:200,occ:142,staff:2,status:'open',pos:[13,0,4],sz:[5,6],color:0x4A5568,roles:[['Valet',1],['Security',1]]},
-    {id:'spa',name:'Spa & wellness',type:'Wellness',cap:24,occ:16,staff:8,status:'open',pos:[-13,0,4],sz:[5,4],color:0x9B7BBF,roles:[['Therapist',5],['Reception',1],['Laundry',2]]},
-    {id:'restaurant',name:'Restaurant',type:'Dining',cap:120,occ:64,staff:14,status:'open',pos:[-9,0,10],sz:[6,4],color:0xB8864A,roles:[['Chef',3],['Waiter',7],['Host',1],['Bartender',2],['Runner',1]]},
-    {id:'gym',name:'Fitness center',type:'Wellness',cap:40,occ:22,staff:3,status:'open',pos:[9,0,10],sz:[4.5,3.5],color:0x5A8F6A,roles:[['Trainer',2],['Cleaner',1]]},
+    {id:'lobby',name:'Grand lobby',type:'Reception',cap:80,occ:28,staff:5,status:'open',pos:[0,0,0],sz:[5,3],color:0xB8A884,roles:[['Reception',3],['Concierge',1],['Bell',1]]},
+    {id:'pool',name:'Indoor pool hall',type:'Aquatics',cap:120,occ:74,staff:6,status:'open',pos:[-12,0,-5],sz:[11,7.5],color:0x3E9BC2,roles:[['Lifeguard',2],['Pool attendant',3],['Bartender',1]]},
+    {id:'gym',name:'Fitness center',type:'Wellness',cap:40,occ:22,staff:3,status:'open',pos:[2.5,0,-10],sz:[8,5.5],color:0x4E7D8A,roles:[['Trainer',2],['Cleaner',1]]},
+    {id:'yoga',name:'Yoga & boxing studio',type:'Wellness',cap:30,occ:14,staff:3,status:'open',pos:[13,0,-9.5],sz:[6.5,5],color:0x9B7BBF,roles:[['Yoga instructor',2],['Cleaner',1]]},
+    {id:'board',name:'Board rooms',type:'Meetings',cap:40,occ:18,staff:3,status:'open',pos:[13,0,-2],sz:[5,3.5],color:0x8A7E6E,roles:[['AV tech',1],['F&B service',2]]},
+    {id:'kids',name:'Kids aqua park',type:'Recreation',cap:40,occ:16,staff:4,status:'open',pos:[12.5,0,5],sz:[6.5,5.5],color:0xE8A33D,roles:[['Childcare',3],['First-aid',1]]},
+    {id:'games',name:'Games room',type:'Leisure',cap:36,occ:14,staff:3,status:'open',pos:[2.5,0,8.5],sz:[6.5,4.5],color:0xB15A6B,roles:[['Games host',2],['Server',1]]},
+    {id:'spa',name:'Spa · jacuzzi terrace',type:'Wellness',cap:24,occ:16,staff:8,status:'open',pos:[-12.5,0,7],sz:[9,5],color:0x8A9BB5,roles:[['Therapist',5],['Reception',1],['Laundry',2]]},
+    {id:'restaurant',name:'Beach restaurant',type:'Dining',cap:120,occ:64,staff:14,status:'open',pos:[-13,0,12.8],sz:[6,3.6],color:0xB8864A,roles:[['Chef',3],['Waiter',7],['Host',1],['Bartender',2],['Runner',1]]},
+    {id:'parking',name:'Valet parking',type:'Infrastructure',cap:200,occ:142,staff:2,status:'open',pos:[3,0,14],sz:[8,3.5],color:0x4A5568,roles:[['Valet',1],['Security',1]]},
   ];
 
   /* realistic humanoid staff figure with walk cycle */
@@ -3909,151 +3911,605 @@ const FAC3D=(()=>{
     return g;
   }
 
-  /* facility prop builders */
-  function buildPool(T,m){
+  /* ============================================================
+     Ultra-real amenity builders — Infinity Towers language:
+     mosaic pools, glass curtain pavilions, warm oak + mirrors,
+     travertine spa terraces. Shared helpers keep meshes cheap.
+     ============================================================ */
+
+  /* ---------- architecture: glass pavilion shell ---------- */
+  function hall(T,m,o){
     const g=new T.Group();
-    // stone pool deck with tiled texture
-    const deck=new T.Mesh(new T.BoxGeometry(5.6,.14,3.6),m.stone);deck.position.y=.07;deck.receiveShadow=true;deck.castShadow=true;g.add(deck);
-    // pool basin with depth
-    const poolBasin=new T.Mesh(new T.BoxGeometry(4.6,.5,2.6),new T.MeshStandardMaterial({color:0x1B4F72,roughness:.2,envMapIntensity:.5}));poolBasin.position.y=.05;g.add(poolBasin);
-    // pool wall tiles (light blue ceramic)
-    const tileMat=new T.MeshStandardMaterial({color:0x5DADE2,roughness:.15,envMapIntensity:.8});
-    const floorTile=new T.Mesh(new T.PlaneGeometry(4.4,2.4),tileMat);floorTile.rotation.x=-Math.PI/2;floorTile.position.y=-.18;g.add(floorTile);
-    // animated water surface — high transmission for realistic see-through
-    const waterMat=new T.MeshPhysicalMaterial({color:0x1A8AB5,roughness:.03,metalness:.0,transmission:.72,transparent:true,opacity:.7,ior:1.33,clearcoat:1,clearcoatRoughness:.02,envMapIntensity:1.6});
-    const water=new T.Mesh(new T.PlaneGeometry(4.5,2.5),waterMat);water.rotation.x=-Math.PI/2;water.position.y=.22;water.receiveShadow=true;g.add(water);g.userData.water=water;
-    // tiled pool edge
-    const edgeMat=new T.MeshStandardMaterial({color:0xE8E2D4,roughness:.4,envMapIntensity:.5});
-    const tile=(x,z,w,d)=>{const t=new T.Mesh(new T.BoxGeometry(w,.06,d),edgeMat);t.position.set(x,.14,z);t.receiveShadow=true;g.add(t);};
-    // sun loungers with fabric cushions
-    for(let i=-1;i<=1;i++){
-      const lrBase=new T.Mesh(new T.BoxGeometry(.55,.1,1.9),m.white);lrBase.position.set(-1.4+i*1.4,.18,-1.0);lrBase.castShadow=true;g.add(lrBase);
-      const lrLeg=(lx,lz)=>{const lg=new T.Mesh(new T.CylinderGeometry(.03,.03,.16,6),m.metal);lg.position.set(-1.4+i*1.4+lx,.07,-1.0+lz);g.add(lg);};
-      lrLeg(-.2,-.8);lrLeg(.2,-.8);lrLeg(-.2,.8);lrLeg(.2,.8);
-      const cushion=new T.Mesh(new T.BoxGeometry(.5,.08,1.8),m.fabric);cushion.position.set(-1.4+i*1.4,.26,-1.0);cushion.castShadow=true;g.add(cushion);
+    const w=o.w,d=o.d,h=o.h||3.0;
+    // foundation slab (can be framed by the builder for recessed pools)
+    if(!o.noSlab){
+      const base=new T.Mesh(new T.BoxGeometry(w,.14,d),m.whiteStone);base.position.y=-.07;base.receiveShadow=true;base.castShadow=true;g.add(base);
     }
-    // pool bar
-    const bar=new T.Mesh(new T.BoxGeometry(.4,.7,1.6),m.stone);bar.position.set(2.1,.35,-.6);bar.castShadow=true;g.add(bar);
-    const barTop=new T.Mesh(new T.BoxGeometry(.5,.06,1.7),m.stone);barTop.position.set(2.1,.7,-.6);barTop.receiveShadow=true;g.add(barTop);
-    const stool=new T.Mesh(new T.CylinderGeometry(.16,.18,.5,14),m.metal);stool.position.set(1.8,.25,-.6);stool.castShadow=true;g.add(stool);
-    // tensile shade canopy — properly positioned
-    const canopyMat=new T.MeshStandardMaterial({color:0xF4F1EB,roughness:.5,side:T.DoubleSide,envMapIntensity:.4});
-    for(let i=-1;i<=1;i++){const pole=new T.Mesh(new T.CylinderGeometry(.03,.03,2.6,8),m.metal);pole.position.set(i*1.8,1.3,1.3);pole.castShadow=true;g.add(pole);}
-    const canopy=new T.Mesh(new T.PlaneGeometry(5.2,3.0),canopyMat);canopy.rotation.x=-Math.PI/2;canopy.position.y=2.4;canopy.position.z=0;canopy.rotation.z=.04;g.add(canopy);
+    if(!o.noFinish){
+      const fin=new T.Mesh(new T.PlaneGeometry(w-.16,d-.16),o.finish||m.mosaicDeck);fin.rotation.x=-Math.PI/2;fin.position.y=.004;fin.receiveShadow=true;g.add(fin);
+    }
+    // warm oak-clad feature walls
+    (o.wood||[]).forEach(s=>{
+      const xw=s==='e'||s==='w',len=xw?d-.3:w-.3;
+      const wm=new T.Mesh(new T.BoxGeometry(xw?.12:len,h-(xw?0:0),xw?len:.12),m.oakSlat);
+      wm.position.set(s==='e'?w/2-.09:s==='w'?-w/2+.09:0,h/2,s==='n'?-d/2+.09:s==='s'?d/2-.09:0);
+      wm.castShadow=true;wm.receiveShadow=true;g.add(wm);
+      // warm cove strip washing the wood
+      const cove=new T.Mesh(new T.BoxGeometry(xw?.05:len-.4,.03,xw?len-.4:.05),m.ledWarm);
+      cove.position.set(s==='e'?w/2-.22:s==='w'?-w/2+.22:0,h-.32,s==='n'?-d/2+.22:s==='s'?d/2-.22:0);
+      g.add(cove);
+    });
+    if(!o.open){
+      // floor-to-ceiling glass curtain walls with bronze mullions
+      const gh=h-.42,yP=.16+gh/2,bay=1.35,door=o.door!==false;
+      const side=(len,axis,sgn)=>{
+        const n=Math.max(2,Math.round(len/bay)),step=len/n,edge=sgn*(axis==='x'?d:w)/2;
+        for(let i=0;i<=n;i++){
+          const p=-len/2+i*step;
+          const post=new T.Mesh(new T.BoxGeometry(axis==='x'?.07:.09,h,axis==='x'?.09:.07),m.mullion);
+          post.position.set(axis==='x'?p:edge,h/2,axis==='x'?edge:p);post.castShadow=true;g.add(post);
+        }
+        for(let i=0;i<n;i++){
+          const mid=-len/2+step*(i+.5);
+          if(door&&axis==='z'&&sgn===1&&Math.abs(mid)<.85)continue; // entrance opening
+          const pane=new T.Mesh(new T.BoxGeometry(axis==='x'?step-.1:gh,gh,axis==='x'?.028:step-.1),m.glass);
+          pane.material=m.glass;pane.renderOrder=2;
+          pane.position.set(axis==='x'?mid:edge,yP,axis==='x'?edge:mid);g.add(pane);
+        }
+        const curb=new T.Mesh(new T.BoxGeometry(axis==='x'?len:.16,.16,axis==='x'?.16:len),m.whiteStone);
+        curb.position.set(axis==='x'?0:edge,.08,axis==='x'?edge:0);curb.receiveShadow=true;g.add(curb);
+        const rail=new T.Mesh(new T.BoxGeometry(axis==='x'?len+.06:.12,.12,axis==='x'?.12:len+.06),m.mullion);
+        rail.position.set(axis==='x'?0:edge,h-.06,axis==='x'?edge:0);g.add(rail);
+      };
+      side(w,'x',1);side(w,'x',-1);side(d,'z',1);side(d,'z',-1);
+    }else{
+      // open pavilion: low stone parapet
+      const par=(len,axis,sgn)=>{const wl=new T.Mesh(new T.BoxGeometry(axis==='x'?len:.14,.55,axis==='x'?.14:len),m.whiteStone);
+        wl.position.set(axis==='x'?0:sgn*w/2,.27,axis==='x'?sgn*d/2:0);wl.castShadow=true;wl.receiveShadow=true;g.add(wl);};
+      par(w,'x',1);par(w,'x',-1);par(d,'z',1);par(d,'z',-1);
+    }
+    // cylindrical mosaic columns with warm uplight rings
+    (o.cols||[]).forEach(([cx,cz])=>{
+      const col=new T.Mesh(new T.CylinderGeometry(.16,.18,h,20),m.mosaicCol);
+      col.position.set(cx,h/2,cz);col.castShadow=true;g.add(col);
+      const ring=new T.Mesh(new T.CylinderGeometry(.185,.185,.07,20),m.ledWarm);ring.position.set(cx,h-.12,cz);g.add(ring);
+      const ringB=new T.Mesh(new T.CylinderGeometry(.185,.185,.05,20),m.ledWarm);ringB.position.set(cx,.12,cz);g.add(ringB);
+    });
+    if(!o.noRoof){
+      const roofMat=m.whiteStone.clone(),sofMat=m.soffit.clone();
+      const roof=new T.Mesh(new T.BoxGeometry(w+.5,.16,d+.5),roofMat);roof.position.y=h+.08;roof.castShadow=true;roof.receiveShadow=true;roof.userData.roof=true;g.add(roof);
+      // dark fascia edge
+      const fb=(len,axis,sgn)=>{const b=new T.Mesh(new T.BoxGeometry(axis==='x'?w+.52:.1,.14,axis==='x'?.1:d+.52),m.mullion);
+        b.position.set(axis==='x'?0:sgn*(w+.5)/2,h+.02,axis==='x'?sgn*(d+.5)/2:0);b.userData.roof=true;g.add(b);};
+      fb(0,'x',1);fb(0,'x',-1);fb(0,'z',1);fb(0,'z',-1);
+      const sof=new T.Mesh(new T.PlaneGeometry(w+.4,d+.4),sofMat);sof.rotation.x=-Math.PI/2;sof.position.y=h+.002;sof.userData.roof=true;g.add(sof);
+      // perimeter cove LED
+      const L=(lx,lz,cx,cz)=>{const s=new T.Mesh(new T.BoxGeometry(lx,.025,lz),m.ledWarm);s.position.set(cx,h-.02,cz);g.add(s);};
+      L(w-1.1,.05,0,d/2-.55);L(w-1.1,.05,0,-d/2+.55);L(.05,d-1.1,w/2-.55,0);L(.05,d-1.1,-w/2+.55,0);
+    }
+    // single warm interior wash light
+    const pl=new T.PointLight(0xFFE2BC,o.light!==undefined?o.light:.55,13,1.7);pl.position.set(0,h-.5,0);g.add(pl);
     return g;
   }
-  function buildBoardroom(T,m){
+
+  /* ---------- prop library ---------- */
+  function lounger(T,m,cushion){
     const g=new T.Group();
-    const base=new T.Mesh(new T.BoxGeometry(4.6,.1,2.8),m.stone);base.position.y=.05;g.add(base);
-    const wall=(w,x,z,ry)=>{const wa=new T.Mesh(new T.BoxGeometry(w,1.4,.08),m.wall);wa.position.set(x,.7,z);wa.rotation.y=ry;g.add(wa);};
-    wall(4.6,0,-1.4,0);wall(4.6,0,1.4,0);wall(2.8,-2.3,0,Math.PI/2);wall(2.8,2.3,0,Math.PI/2);
-    const table=new T.Mesh(new T.BoxGeometry(2.4,.08,1.0),m.darkwood);table.position.y=.55;g.add(table);
-    for(let i=0;i<6;i++){const c=new T.Group();const s=new T.Mesh(new T.BoxGeometry(.4,.05,.4),m.fabric);s.position.y=.42;c.add(s);const b=new T.Mesh(new T.BoxGeometry(.4,.4,.05),m.fabric);b.position.set(0,.62,-.17);c.add(b);
-      const side=i%2,idx=Math.floor(i/2);c.position.set(side===0?(-.9+idx*.9):(-.9+idx*.9),.2,side===0?-.7:.7);c.rotation.y=side?Math.PI:0;g.add(c);}
-    const screen=new T.Mesh(new T.PlaneGeometry(1.6,.9),new T.MeshStandardMaterial({color:0x101820,emissive:0x1A2A3A,emissiveIntensity:.4}));screen.position.set(0,1.1,-1.35);g.add(screen);
+    const base=new T.Mesh(new T.BoxGeometry(.62,.07,1.62),m.teak);base.position.y=.16;base.castShadow=true;g.add(base);
+    for(const[x,z]of[[-.24,-.7],[.24,-.7],[-.24,.7],[.24,.7]]){const lg=new T.Mesh(new T.BoxGeometry(.05,.16,.05),m.mullion);lg.position.set(x,.08,z);g.add(lg);}
+    const seat=new T.Mesh(new T.BoxGeometry(.56,.1,1.18),cushion||m.fabWhite);seat.position.set(0,.235,.2);seat.castShadow=true;g.add(seat);
+    const bg=new T.Group();bg.position.set(0,.24,-.42);bg.rotation.x=.62;
+    const back=new T.Mesh(new T.BoxGeometry(.56,.46,.1),cushion||m.fabWhite);back.position.y=.2;back.castShadow=true;bg.add(back);g.add(bg);
+    const pillow=new T.Mesh(new T.BoxGeometry(.42,.1,.14),m.fabWhite);pillow.position.set(0,.42,-.62);pillow.rotation.x=.5;g.add(pillow);
+    return g;
+  }
+  function pouf(T,m,mat,r){const p=new T.Mesh(new T.CylinderGeometry(r||.27,(r||.27)*1.04,.24,22),mat||m.fabGrey);p.position.y=.12;p.castShadow=true;return p;}
+  function sofa(T,m){
+    const g=new T.Group();
+    const base=new T.Mesh(new T.BoxGeometry(1.9,.24,.72),m.fabGrey);base.position.y=.26;base.castShadow=true;g.add(base);
+    const back=new T.Mesh(new T.BoxGeometry(1.9,.5,.14),m.fabGrey);back.position.set(0,.56,-.32);back.castShadow=true;g.add(back);
+    for(const s of[-.92,.92]){const a=new T.Mesh(new T.BoxGeometry(.14,.4,.72),m.fabGrey);a.position.set(s,.42,0);a.castShadow=true;g.add(a);}
+    for(const x of[-.47,.47]){const c=new T.Mesh(new T.BoxGeometry(.9,.1,.62),m.fabGrey);c.position.set(x,.4,.04);c.castShadow=true;g.add(c);}
+    const pcols=[m.fabNavy,m.fabGrey,m.fabBlue];
+    [-0.6,0,.6].forEach((x,i)=>{const p=new T.Mesh(new T.BoxGeometry(.34,.3,.1),pcols[i]);p.position.set(x,.62,-.28);p.rotation.x=-.12;g.add(p);});
+    return g;
+  }
+  function chair(T,m){
+    const g=new T.Group();
+    const s=new T.Mesh(new T.BoxGeometry(.42,.06,.42),m.fabGrey);s.position.y=.42;s.castShadow=true;g.add(s);
+    const b=new T.Mesh(new T.BoxGeometry(.42,.42,.06),m.fabGrey);b.position.set(0,.64,-.18);b.castShadow=true;g.add(b);
+    for(const[x,z]of[[-.17,-.17],[.17,-.17],[-.17,.17],[.17,.17]]){const l=new T.Mesh(new T.BoxGeometry(.04,.4,.04),m.mullion);l.position.set(x,.2,z);g.add(l);}
+    return g;
+  }
+  function diningTable(T,m,round){
+    const g=new T.Group();
+    const top=new T.Mesh(round?new T.CylinderGeometry(.55,.55,.06,28):new T.BoxGeometry(.95,.06,.95),m.darkwood);
+    top.position.y=.72;top.castShadow=true;g.add(top);
+    const leg=new T.Mesh(new T.CylinderGeometry(.07,.1,.7,12),m.mullion);leg.position.y=.36;g.add(leg);
+    return g;
+  }
+  function plant(T,m,s){
+    s=s||1;const g=new T.Group();
+    const pot=new T.Mesh(new T.CylinderGeometry(.22,.17,.32,16),m.whiteStone);pot.position.y=.16;pot.castShadow=true;g.add(pot);
+    const soil=new T.Mesh(new T.CylinderGeometry(.19,.19,.03,16),m.rubber);soil.position.y=.31;g.add(soil);
+    for(let i=0;i<3;i++){const l=new T.Mesh(new T.SphereGeometry(.26-i*.04,12,10),i?m.green:m.greenLight);
+      l.scale.set(1,1.25,.9);l.position.set((i-1)*.12,.55+i*.18,(i%2-.5)*.14);l.castShadow=true;g.add(l);}
+    g.scale.setScalar(s);return g;
+  }
+  function palm(T,m,s){
+    s=s||1;const g=new T.Group();
+    const trunk=new T.Mesh(new T.CylinderGeometry(.09,.15,2.5,10),m.palmTrunk);trunk.position.y=1.25;trunk.rotation.z=.05;trunk.castShadow=true;g.add(trunk);
+    const crown=new T.Group();crown.position.y=2.5;
+    for(let i=0;i<10;i++){const f=new T.Mesh(new T.BoxGeometry(.1,.035,1.15),m.palmFrond);
+      f.position.set(0,0,.5);const a=i/10*Math.PI*2;
+      const fg=new T.Group();fg.rotation.y=a;fg.add(f);f.rotation.x=.55+((i%3)*.08);crown.add(fg);}
+    for(let i=0;i<3;i++){const c=new T.Mesh(new T.SphereGeometry(.09,8,6),m.palmTrunk);c.position.set((Math.random()-.2)*.2,-.05,(Math.random()-.2)*.2);crown.add(c);}
+    g.add(crown);g.scale.setScalar(s);return g;
+  }
+  function trk2group(o,g){g.add(o);return g;}
+  function pendant(T,m,y){
+    const g=new T.Group();
+    const cable=new T.Mesh(new T.CylinderGeometry(.008,.008,y,6),m.mullion);cable.position.y=y/2+.9;g.add(cable);
+    const lamp=new T.Mesh(new T.CylinderGeometry(.09,.16,.16,16),m.ledWarm);lamp.position.y=.82;g.add(lamp);
+    return g;
+  }
+
+  /* ---------- fitness equipment ---------- */
+  function treadmill(T,m){
+    const g=new T.Group();
+    const deck=new T.Mesh(new T.BoxGeometry(1.72,.1,.74),m.machineDark);deck.position.set(0,.09,-.05);deck.castShadow=true;g.add(deck);
+    const belt=new T.Mesh(new T.BoxGeometry(1.36,.025,.54),m.rubber);belt.position.set(-.12,.155,-.05);g.add(belt);
+    const cowl=new T.Mesh(new T.BoxGeometry(.42,.2,.74),m.machineDark);cowl.position.set(.62,.18,-.05);g.add(cowl);
+    for(const sx of[-.26,.26]){
+      const post=new T.Mesh(new T.CylinderGeometry(.035,.045,.7,10),m.machineDark);post.position.set(.62+sx*.3,.55,-.05);post.rotation.x=.18;g.add(post);
+      const hb=new T.Mesh(new T.BoxGeometry(.05,.04,.3),m.machineDark);hb.position.set(.45+sx*.3,.86,-.05);g.add(hb);
+    }
+    const cons=new T.Mesh(new T.BoxGeometry(.46,.28,.08),m.black);cons.position.set(.6,.95,-.05);cons.rotation.x=.12;g.add(cons);
+    const scr=new T.Mesh(new T.PlaneGeometry(.34,.16),m.screenGlow);scr.position.set(.6,1.0,-.005);scr.rotation.x=.12;g.add(scr);
+    return g;
+  }
+  function elliptical(T,m){
+    const g=new T.Group();
+    const base=new T.Mesh(new T.BoxGeometry(1.5,.08,.6),m.machineDark);base.position.y=.08;g.add(base);
+    const wheel=new T.Mesh(new T.CylinderGeometry(.26,.26,.06,22),m.machineDark);wheel.rotation.z=Math.PI/2;wheel.position.set(-.55,.34,0);g.add(wheel);
+    const rim=new T.Mesh(new T.TorusGeometry(.26,.02,8,28),m.chrome);rim.position.set(-.55,.34,0);rim.rotation.y=Math.PI/2;g.add(rim);
+    for(const sx of[-.13,.13]){
+      const ped=new T.Mesh(new T.BoxGeometry(.22,.03,.12),m.black);ped.position.set(.1,.25,sx);g.add(ped);
+      const arm=new T.Mesh(new T.CylinderGeometry(.025,.025,.7,8),m.machineDark);arm.position.set(.55,.62,sx);arm.rotation.x=.25;g.add(arm);
+      const mast=new T.Mesh(new T.CylinderGeometry(.03,.03,.65,8),m.machineDark);mast.position.set(.55,.55,sx);g.add(mast);
+    }
+    const cons=new T.Mesh(new T.BoxGeometry(.3,.2,.06),m.black);cons.position.set(.62,.95,0);g.add(cons);
+    const scr=new T.Mesh(new T.PlaneGeometry(.22,.12),m.screenGlow);scr.position.set(.62,.98,.035);g.add(scr);
+    return g;
+  }
+  function dumbbell(T,m,r){
+    const g=new T.Group();
+    const h=new T.Mesh(new T.CylinderGeometry(.022,.022,.16,8),m.chrome);h.rotation.z=Math.PI/2;g.add(h);
+    for(const sx of[-.1,.1]){const p=new T.Mesh(new T.CylinderGeometry(r,r,.06,14),m.black);p.rotation.z=Math.PI/2;p.position.x=sx;g.add(p);
+      const cap=new T.Mesh(new T.CylinderGeometry(r*.7,r*.7,.065,14),m.chrome);cap.rotation.z=Math.PI/2;cap.position.x=sx+(sx>0?.008:-.008);g.add(cap);}
+    return g;
+  }
+  function dumbbellRack(T,m){
+    const g=new T.Group();
+    for(const x of[-.7,.7])for(const z of[-.2,.2]){const p=new T.Mesh(new T.BoxGeometry(.06,1.0,.06),m.machineDark);p.position.set(x,.5,z);g.add(p);}
+    [.25,.65].forEach((y,tier)=>{
+      const rail1=new T.Mesh(new T.BoxGeometry(1.5,.05,.05),m.machineDark);rail1.position.set(0,y,-.2);g.add(rail1);
+      const rail2=rail1.clone();rail2.position.z=.2;g.add(rail2);
+      for(let i=0;i<6;i++){const db=dumbbell(T,m,.065+i*.008);db.position.set(-.62+i*.25,y+.08,tier?-.2:.2);db.rotation.y=Math.PI/2;g.add(db);}
+    });
+    return g;
+  }
+  function weightBench(T,m){
+    const g=new T.Group();
+    const pad=new T.Mesh(new T.BoxGeometry(1.5,.09,.32),m.leather);pad.position.set(0,.42,0);pad.castShadow=true;g.add(pad);
+    const incl=new T.Mesh(new T.BoxGeometry(.5,.08,.32),m.leather);incl.position.set(.55,.58,0);incl.rotation.z=-.28;g.add(incl);
+    for(const x of[-.6,.6]){const l=new T.Mesh(new T.BoxGeometry(.06,.4,.06),m.machineDark);l.position.set(x,.2,0);g.add(l);}
+    const bar=new T.Mesh(new T.CylinderGeometry(.02,.02,1.7,8),m.chrome);bar.rotation.z=Math.PI/2;bar.position.set(0,.72,0);g.add(bar);
+    for(const sx of[-.82,.82]){const pl=new T.Mesh(new T.CylinderGeometry(.13,.13,.05,16),m.black);pl.rotation.z=Math.PI/2;pl.position.x=sx;g.add(pl);}
+    return g;
+  }
+  function kettlebell(T,m){
+    const g=new T.Group();
+    const b=new T.Mesh(new T.SphereGeometry(.09,12,10),m.black);b.position.y=.1;b.scale.y=.95;g.add(b);
+    const h=new T.Mesh(new T.TorusGeometry(.06,.018,8,14,Math.PI),m.black);h.position.y=.2;h.rotation.z=Math.PI;g.add(h);
+    return g;
+  }
+  function yogaMat(T,m,col){
+    const g=new T.Group();
+    const mat=new T.Mesh(new T.BoxGeometry(.64,.022,1.75),new T.MeshStandardMaterial({color:col,roughness:.92}));mat.position.y=.015;mat.receiveShadow=true;g.add(mat);
+    const towel=new T.Mesh(new T.CylinderGeometry(.045,.045,.5,12),m.fabWhite);towel.rotation.z=Math.PI/2;towel.position.set(-.05,.06,-.6);g.add(towel);
+    const bottle=new T.Mesh(new T.CylinderGeometry(.025,.025,.16,10),m.glass);bottle.position.set(.22,.1,-.6);g.add(bottle);
+    return g;
+  }
+  function fitBall(T,m,r,col){const b=new T.Mesh(new T.SphereGeometry(r,20,16),new T.MeshStandardMaterial({color:col,roughness:.62,envMapIntensity:.5}));b.position.y=r;b.castShadow=true;return b;}
+  function punchBag(T,m){
+    const g=new T.Group();
+    const strap=new T.Mesh(new T.CylinderGeometry(.012,.012,.55,6),m.black);strap.position.y=2.55;g.add(strap);
+    const bag=new T.Mesh(new T.CapsuleGeometry(.17,.7,6,14),m.leather);bag.position.y=2.0;bag.castShadow=true;g.add(bag);
+    const band=new T.Mesh(new T.CylinderGeometry(.175,.175,.1,16),new T.MeshStandardMaterial({color:0x7A1F1F,roughness:.55}));band.position.y=2.28;g.add(band);
+    return g;
+  }
+  function spinBike(T,m){
+    const g=new T.Group();
+    const wheel=new T.Mesh(new T.CylinderGeometry(.24,.24,.07,22),m.machineDark);wheel.rotation.z=Math.PI/2;wheel.position.set(-.28,.25,0);g.add(wheel);
+    const rim=new T.Mesh(new T.TorusGeometry(.24,.025,8,28),m.chrome);rim.rotation.y=Math.PI/2;rim.position.set(-.28,.25,0);g.add(rim);
+    const frame=new T.Mesh(new T.BoxGeometry(.55,.04,.05),m.machineDark);frame.position.set(.05,.4,0);frame.rotation.z=-.3;g.add(frame);
+    const saddle=new T.Mesh(new T.BoxGeometry(.22,.06,.16),m.leather);saddle.position.set(.28,.62,0);g.add(saddle);
+    const bar=new T.Mesh(new T.CylinderGeometry(.02,.02,.42,8),m.machineDark);bar.rotation.z=Math.PI/2;bar.position.set(.32,.62,0);g.add(bar);
+    return g;
+  }
+  function stepBox(T,m){
+    const g=new T.Group();
+    const s1=new T.Mesh(new T.BoxGeometry(.7,.12,.28),m.fabGrey);s1.position.y=.06;g.add(s1);
+    const s2=new T.Mesh(new T.BoxGeometry(.5,.12,.24),m.fabGrey);s2.position.set(0,.18,-.02);g.add(s2);
+    return g;
+  }
+  function shelfUnit(T,m){
+    const g=new T.Group();
+    const back=new T.Mesh(new T.BoxGeometry(1.5,1.9,.06),m.oak);back.position.y=.95;g.add(back);
+    for(let i=0;i<4;i++){const b=new T.Mesh(new T.BoxGeometry(1.5,.05,.3),m.teak);b.position.set(0,.15+i*.55,.14);b.castShadow=true;g.add(b);
+      if(i<3)for(let t=0;t<3;t++){const tw=new T.Mesh(new T.BoxGeometry(.3,.09,.22),m.fabWhite);tw.position.set(-.5+t*.5,.24+i*.55,.14);g.add(tw);}
+      if(i===3){for(let k=0;k<3;k++){const kb=kettlebell(T,m);kb.scale.setScalar(.7);kb.position.set(-.5+k*.5,.21,.14);g.add(kb);}}
+    }
+    return g;
+  }
+  function mirrorWall(T,m,w,h){
+    const g=new T.Group();
+    const mir=new T.Mesh(new T.PlaneGeometry(w,h),m.mirror);mir.position.y=h/2+.2;mir.renderOrder=1;g.add(mir);
+    for(let i=1;i<4;i++){const seam=new T.Mesh(new T.BoxGeometry(.015,h,.02),m.mullion);seam.position.set(-w/2+i*w/4,h/2+.2,.01);g.add(seam);}
+    return g;
+  }
+
+  /* ---------- leisure ---------- */
+  function billiards(T,m){
+    const g=new T.Group();
+    const cab=new T.Mesh(new T.BoxGeometry(2.15,.62,1.1),m.darkwood);cab.position.y=.42;cab.castShadow=true;g.add(cab);
+    const felt=new T.Mesh(new T.PlaneGeometry(1.86,.82),m.felt);felt.rotation.x=-Math.PI/2;felt.position.y=.74;felt.receiveShadow=true;g.add(felt);
+    for(const[sx,sz,w2,d2]of[[0,.5,2.06,.1],[0,-.5,2.06,.1],[.98,0,.1,1.02],[-.98,0,.1,1.02]]){const r=new T.Mesh(new T.BoxGeometry(w2,.12,d2),m.leather);r.position.set(sx,.76,sz);g.add(r);}
+    for(const[sx,sz]of[[.92,.42],[-.92,.42],[.92,-.42],[-.92,-.42],[0,.5],[0,-.5]]){const pk=new T.Mesh(new T.CylinderGeometry(.06,.06,.02,10),m.black);pk.rotation.x=Math.PI/2;pk.position.set(sx,.78,sz);g.add(pk);}
+    for(const x of[-.95,.95])for(const zz of[-.4,.4]){const l=new T.Mesh(new T.BoxGeometry(.1,.7,.1),m.darkwood);l.position.set(x,.35,zz);g.add(l);}
+    const cols=[0xF2F0E8,0xE8C33D,0x2E5BC8,0xC83A3A,0x7A3FB5,0xE87A2E,0x2E8A4E,0x15151A,0xB53A6B];
+    cols.forEach((c,i)=>{const b=new T.Mesh(new T.SphereGeometry(.035,10,8),new T.MeshStandardMaterial({color:c,roughness:.25,envMapIntensity:1}));
+      b.position.set(-.5+i*.12,.78,i<3?-.2:.1);g.add(b);});
+    return g;
+  }
+  function foosball(T,m){
+    const g=new T.Group();
+    const cab=new T.Mesh(new T.BoxGeometry(.78,.28,1.34),m.darkwood);cab.position.y=.72;cab.castShadow=true;g.add(cab);
+    const top=new T.Mesh(new T.BoxGeometry(.68,.02,1.24),m.felt);top.rotation.x=-Math.PI/2;top.position.y=.87;g.add(top);
+    for(const[x,z]of[[-.32,-.58],[.32,-.58],[-.32,.58],[.32,.58]]){const l=new T.Mesh(new T.BoxGeometry(.07,.7,.07),m.mullion);l.position.set(x,.35,z);g.add(l);}
+    for(let i=0;i<6;i++){const rod=new T.Mesh(new T.CylinderGeometry(.012,.012,.86,8),m.chrome);rod.rotation.z=Math.PI/2;rod.position.set(0,.82,-.5+i*.2);g.add(rod);
+      for(let p=0;p<(i%2?2:3);p++){const fig=new T.Mesh(new T.BoxGeometry(.05,.14,.08),i%2?m.fabBlue:m.fabRed);fig.position.set((p-(i%2?.5:1))*.22,.75,-.5+i*.2);g.add(fig);}}
+    return g;
+  }
+  function tvUnit(T,m){
+    const g=new T.Group();
+    const frame=new T.Mesh(new T.BoxGeometry(.08,.95,1.55),m.black);g.add(frame);
+    const scr=new T.Mesh(new T.PlaneGeometry(1.4,.79),m.screenDark);scr.rotation.y=Math.PI/2;scr.position.x=.045;g.add(scr);
+    const console_=new T.Mesh(new T.BoxGeometry(.35,.08,1.7),m.darkwood);console_.position.set(.2,.5,0);g.add(console_);
+    return g;
+  }
+  function jacuzzi(T,m){
+    const g=new T.Group();const L=1.9,t=.18,h=.56;
+    const wall=(w2,d2,x,z)=>{const b=new T.Mesh(new T.BoxGeometry(w2,h,d2),m.travertine);b.position.set(x,h/2,z);b.castShadow=true;b.receiveShadow=true;g.add(b);};
+    wall(L,t,0,L/2-t/2);wall(L,t,0,-L/2+t/2);wall(t,L,L/2-t/2,0);wall(t,L,-L/2+t/2,0);
+    const floor=new T.Mesh(new T.BoxGeometry(L-.2,.08,L-.2),m.mosaicPool);floor.position.y=.04;g.add(floor);
+    const water=new T.Mesh(new T.PlaneGeometry(L-.34,L-.34),m.waterJac);water.rotation.x=-Math.PI/2;water.position.y=.44;water.userData.baseY=.44;water.userData.baseOp=.8;g.add(water);
+    // bubbling jets
+    const bub=[];
+    for(let i=0;i<9;i++){const r=.03+Math.random()*.05;const b=new T.Mesh(new T.SphereGeometry(r,8,6),m.foam);
+      b.position.set((Math.random()-.5)*1.2,.46,(Math.random()-.5)*1.2);g.add(b);bub.push(b);}
+    // entry steps
+    const st1=new T.Mesh(new T.BoxGeometry(.5,.12,.5),m.travertine);st1.position.set(0,.06,L/2+.25);g.add(st1);
+    const st2=new T.Mesh(new T.BoxGeometry(.5,.24,.4),m.travertine);st2.position.set(0,.12,L/2+.55);g.add(st2);
+    g.userData.water=water;g.userData.bubbles=bub;
+    return g;
+  }
+  function linenScreen(T,m){
+    const g=new T.Group();
+    for(let i=0;i<2;i++){const p=new T.Group();
+      const frame=new T.Mesh(new T.BoxGeometry(.66,1.75,.04),m.teak);p.add(frame);
+      const linen=new T.Mesh(new T.PlaneGeometry(.58,1.62),m.linen);linen.position.z=.025;p.add(linen);
+      p.position.x=(i-.5)*.6;p.rotation.y=i?-.5:.5;g.add(p);}
+    g.position.y=.88;return g;
+  }
+
+  /* ---------- facility builders ---------- */
+  function buildPool(T,m){
+    const g=hall(T,m,{w:11,d:7.5,noSlab:true,noFinish:true,cols:[[-4.6,-2.9],[4.6,-2.9],[-4.6,2.9],[4.6,2.9],[-4.6,0],[4.6,0]],wood:['e']});
+    const cx=-.3,cz=.3,pw=8,pd=4;
+    // slab frame around the pool opening (cx,cz ± 4.15 / 2.15)
+    const slb=(w2,d2,x,z)=>{const b=new T.Mesh(new T.BoxGeometry(w2,.14,d2),m.whiteStone);b.position.set(x,-.07,z);b.receiveShadow=true;b.castShadow=true;g.add(b);};
+    slb(11,1.3,0,3.1);slb(11,2.2,0,-2.65);slb(1.65,4.3,4.675,cz);slb(1.05,4.3,-4.975,cz);
+    // mosaic deck frame around the pool opening
+    const deck=(w2,d2,x,z)=>{const p=new T.Mesh(new T.PlaneGeometry(w2,d2),m.mosaicDeck);p.rotation.x=-Math.PI/2;p.position.set(x,.005,z);p.receiveShadow=true;g.add(p);};
+    deck(10.84,1.37,0,cz+2.985);deck(10.84,1.37,0,cz-2.985);
+    deck(1.12,4.6,cx+4.86,cz);deck(1.12,4.6,cx-4.86,cz);
+    // basin walls + mosaic floor (real recessed pool)
+    const bw=(w2,d2,x,z)=>{const b=new T.Mesh(new T.BoxGeometry(w2,.6,d2),m.poolDeep);b.position.set(x,-.3,z);g.add(b);};
+    bw(pw+.32,.12,cx,cz+pd/2);bw(pw+.32,.12,cx,cz-pd/2);bw(.12,pd+.32,cx+pw/2,cz);bw(.12,pd+.32,cx-pw/2,cz);
+    const floor=new T.Mesh(new T.PlaneGeometry(pw-.3,pd-.3),m.mosaicPool);floor.rotation.x=-Math.PI/2;floor.position.set(cx,-.5,cz);floor.receiveShadow=true;g.add(floor);
+    // crystal water
+    const water=new T.Mesh(new T.PlaneGeometry(pw-.12,pd-.12),m.waterPool);water.rotation.x=-Math.PI/2;water.position.set(cx,-.045,cz);water.userData.baseY=-.045;water.userData.baseOp=.72;water.renderOrder=3;g.add(water);g.userData.water=water;
+    // black stone coping
+    const cop=(w2,d2,x,z)=>{const c=new T.Mesh(new T.BoxGeometry(w2,.06,d2),m.blackStone);c.position.set(x,.02,z);c.receiveShadow=true;g.add(c);};
+    cop(pw+.2,.2,cx,cz+pd/2+.04);cop(pw+.2,.2,cx,cz-pd/2-.04);cop(.2,pd+.2,cx+pw/2+.04,cz);cop(.2,pd+.2,cx-pw/2-.04,cz);
+    // underwater LED light lines
+    const led=(w2,d2,x,z)=>{const l=new T.Mesh(new T.BoxGeometry(w2,.018,d2),m.ledCool);l.position.set(x,-.05,z);g.add(l);};
+    led(pw-.5,.05,cx,cz+pd/2-.18);led(pw-.5,.05,cx,cz-pd/2+.18);led(.05,pd-.5,cx+pw/2-.18,cz);led(.05,pd-.5,cx-pw/2+.18,cz);
+    // entry steps at south-west corner
+    for(let i=0;i<3;i++){const s=new T.Mesh(new T.BoxGeometry(.7,.05,.25),m.whiteStone);s.position.set(cx-pw/2+.5,-.06-i*.12,cz+pd/2-.2-i*.22);g.add(s);}
+    // lounger row (south deck)
+    [-2.8,0,2.8].forEach(x=>{const l=lounger(T,m);l.position.set(x,0,3.05);g.add(l);});
+    // lounge side tables
+    [1.4,-1.4].forEach(dx=>{const t=new T.Mesh(new T.CylinderGeometry(.22,.22,.05,18),m.whiteStone);t.position.set(dx,.32,3.05);g.add(t);
+      const stem=new T.Mesh(new T.CylinderGeometry(.03,.03,.3,8),m.chrome);stem.position.set(dx,.17,3.05);g.add(stem);});
+    // sofa group (north deck)
+    const sf=sofa(T,m);sf.position.set(-3,-.15,-3.05);sf.rotation.y=0;g.add(sf);
+    const p1=pouf(T,m),p2=pouf(T,m,m.fabBlush,.24);p1.position.set(-1.6,-.1,-3);p2.position.set(-2.3,-.1,-2.5);g.add(p1,p2);
+    // shower fittings on wood wall
+    for(let i=0;i<3;i++){const sz=-2+i*2;
+      const pipe=new T.Mesh(new T.CylinderGeometry(.018,.018,.62,8),m.black);pipe.position.set(5.28,1.7,sz);g.add(pipe);
+      const head=new T.Mesh(new T.CylinderGeometry(.07,.07,.03,12),m.black);head.rotation.z=Math.PI/2;head.position.set(5.22,2.0,sz);g.add(head);
+      const knob=new T.Mesh(new T.SphereGeometry(.035,8,8),m.chrome);knob.position.set(5.2,1.5,sz);g.add(knob);}
+    const pl1=plant(T,m,1.15);pl1.position.set(4.2,0,-3.2);g.add(pl1);
+    const pl2=plant(T,m,1.15);pl2.position.set(-5,0,2.6);g.add(pl2);
     return g;
   }
   function buildKids(T,m){
-    const g=new T.Group();
-    const base=new T.Mesh(new T.BoxGeometry(4,.08,3.4),new T.MeshStandardMaterial({color:0xE8C54A,roughness:.8}));base.position.y=.04;base.receiveShadow=true;g.add(base);
-    const slide=new T.Mesh(new T.BoxGeometry(2.4,.15,.3),new T.MeshStandardMaterial({color:0xE0615A,roughness:.7}));slide.position.set(.6,.5,-1.0);slide.rotation.z=-.35;g.add(slide);
-    const tower=new T.Mesh(new T.BoxGeometry(.8,1.4,.8),new T.MeshStandardMaterial({color:0x5BAA6E,roughness:.7}));tower.position.set(-.6,.7,-1.0);g.add(tower);
-    for(let i=0;i<4;i++){const b=new T.Mesh(new T.SphereGeometry(.22,10,10),new T.MeshStandardMaterial({color:[0xE0615A,0x5BAA6E,0x3A8FB7,0xE0A83B][i],roughness:.7}));b.position.set(-1.4+i*.9,.22,.8);g.add(b);}
-    const net=new T.Mesh(new T.CylinderGeometry(.6,.6,.9,8),new T.MeshStandardMaterial({color:0xC9A85A,roughness:.8}));net.position.set(1.4,.45,.6);g.add(net);
+    const g=hall(T,m,{w:6.5,d:5.5,open:true,finish:m.epdm,cols:[[-2.7,-2.1],[2.7,-2.1],[-2.7,2.1],[2.7,2.1]]});
+    // shallow kids pool
+    const px=-1,pz=-.7;
+    const basin=new T.Mesh(new T.BoxGeometry(3.5,.18,2.3),m.mosaicKids);basin.position.set(px,-.08,pz);g.add(basin);
+    const water=new T.Mesh(new T.PlaneGeometry(3.4,2.2),m.waterKids);water.rotation.x=-Math.PI/2;water.position.set(px,.02,pz);water.userData.baseY=.02;water.userData.baseOp=.75;g.add(water);g.userData.water=water;
+    const cop=(w2,d2,x,z)=>{const c=new T.Mesh(new T.BoxGeometry(w2,.06,d2),m.whiteStone);c.position.set(x,.03,z);c.receiveShadow=true;g.add(c);};
+    cop(3.6,.16,px,pz+1.2);cop(3.6,.16,px,pz-1.2);cop(.16,2.4,px+1.8,pz);cop(.16,2.4,px-1.8,pz);
+    // water-slide tower + chute (north side)
+    const tx=1.6,tz=-2.1;
+    for(const[x,z]of[[-.45,-.35],[.45,-.35],[-.45,.35],[.45,.35]]){const p=new T.Mesh(new T.BoxGeometry(.07,1.1,.07),m.white);p.position.set(tx+x,.55,tz+z);g.add(p);}
+    const plat=new T.Mesh(new T.BoxGeometry(1.05,.09,.95),m.kidsAqua);plat.position.set(tx,1.08,tz);plat.castShadow=true;g.add(plat);
+    const roof2=new T.Mesh(new T.ConeGeometry(.72,.4,4),m.kidsRed);roof2.position.set(tx,1.5,tz);roof2.rotation.y=Math.PI/4;g.add(roof2);
+    const chute=new T.Mesh(new T.BoxGeometry(.62,.08,2.5),m.kidsAqua);chute.position.set(tx-.05,.62,tz+1.25);chute.rotation.x=-.42;chute.castShadow=true;g.add(chute);
+    for(const sx of[-.28,.28]){const lip=new T.Mesh(new T.BoxGeometry(.05,.1,2.4),m.white);lip.position.set(tx-.05+sx,.66,tz+1.25);lip.rotation.x=-.42;g.add(lip);}
+    // mushroom fountain in the pool
+    const stem=new T.Mesh(new T.CylinderGeometry(.08,.1,.75,12),m.white);stem.position.set(-2,.4,pz-.1);g.add(stem);
+    const cap=new T.Mesh(new T.SphereGeometry(.42,18,10,0,Math.PI*2,0,Math.PI/2),m.kidsAqua);cap.position.set(-2,.78,pz-.1);g.add(cap);
+    // floating toys
+    const toyCols=[0xE85D5D,0xF2C84B,0x5AA8E8,0x7BC86C];
+    toyCols.forEach((c,i)=>{const b=new T.Mesh(new T.SphereGeometry(.13,12,10),new T.MeshStandardMaterial({color:c,roughness:.5}));b.position.set(px-1+i*.65,.14,pz+.55+(i%2)*.5);g.add(b);});
+    // tipping bucket pole
+    const bp=new T.Mesh(new T.CylinderGeometry(.05,.05,1.5,8),m.mullion);bp.position.set(2.35,.75,-1.8);g.add(bp);
+    const bk=new T.Mesh(new T.BoxGeometry(.35,.3,.35),m.kidsRed);bk.position.set(2.35,1.45,-1.8);bk.rotation.z=.25;g.add(bk);
+    // ball bin corner
+    const bin=new T.Mesh(new T.CylinderGeometry(.35,.3,.5,16),m.white);bin.position.set(-2.6,.25,1.9);g.add(bin);
+    for(let i=0;i<5;i++){const b=new T.Mesh(new T.SphereGeometry(.12,10,8),new T.MeshStandardMaterial({color:toyCols[i%4],roughness:.55}));b.position.set(-2.6+(Math.random()-.5)*.3,.55+i*.02,1.9+(Math.random()-.5)*.3);g.add(b);}
     return g;
   }
-  function buildParking(T,m){
-    const g=new T.Group();
-    const lot=new T.Mesh(new T.BoxGeometry(4.6,.06,5.6),new T.MeshStandardMaterial({color:0x3A3F47,roughness:.9}));lot.position.y=.03;g.add(lot);
-    for(let r=0;r<7;r++)for(let c=0;c<3;c++){const line=new T.Mesh(new T.BoxGeometry(.04,.01,2.2),new T.MeshStandardMaterial({color:0xF2E0AE,roughness:.6}));line.position.set(-1.4+c*1.4,.04,-2.2+r*.7);g.add(line);}
-    const colors=[0xFFFFFF,0x1A1A1A,0xC9A85A,0x3A5A85,0x96414F,0x5A8F6A];
-    const glass=new T.MeshPhysicalMaterial({color:0x1A2230,roughness:.05,metalness:.3,transparent:true,opacity:.55,envMapIntensity:1.2});
-    for(let i=0;i<14;i++){const car=new T.Group();const col=colors[i%colors.length];const bodyMat=new T.MeshStandardMaterial({color:col,roughness:.32,metalness:.6,envMapIntensity:1.0});
-      const body=new T.Mesh(new T.BoxGeometry(.92,.38,1.8),bodyMat);body.position.y=.26;body.castShadow=true;car.add(body);
-      // chassis lower
-      const lower=new T.Mesh(new T.BoxGeometry(.96,.16,1.84),new T.MeshStandardMaterial({color:0x2A2A2A,roughness:.6,metalness:.3}));lower.position.y=.14;car.add(lower);
-      // cabin
-      const top=new T.Mesh(new T.BoxGeometry(.78,.32,1.0),bodyMat);top.position.set(0,.58,-.08);top.castShadow=true;car.add(top);
-      // windshield + windows
-      const ws=new T.Mesh(new T.BoxGeometry(.72,.28,.04),glass);ws.position.set(0,.58,.38);ws.rotation.x=-.4;car.add(ws);
-      const rw=new T.Mesh(new T.BoxGeometry(.72,.26,.04),glass);rw.position.set(0,.58,-.58);rw.rotation.x=.4;car.add(rw);
-      const sw=(z)=>{const w=new T.Mesh(new T.BoxGeometry(.03,.24,.7),glass);w.position.set(.4,.58,z);car.add(w);const w2=w.clone();w2.position.x=-.4;car.add(w2);};sw(-.08);
-      // wheels
-      for(const wx of[-.42,.42])for(const wz of[-.68,.68]){const w=new T.Mesh(new T.CylinderGeometry(.14,.14,.12,14),m.black);w.position.set(wx,.1,wz);w.rotation.x=Math.PI/2;car.add(w);
-        const rim=new T.Mesh(new T.CylinderGeometry(.06,.06,.13,10),m.metal);rim.position.set(wx,.1,wz);rim.rotation.x=Math.PI/2;car.add(rim);}
-      const r=Math.floor(i/3),c=i%3;car.position.set(-1.4+c*1.4,.08,-2.2+r*.7);car.rotation.y=(c%2?0:0);g.add(car);}
+  function buildGym(T,m){
+    const g=hall(T,m,{w:8,d:5.5,finish:m.oak,wood:['s']});
+    // full-height mirror wall (north)
+    const mir=mirrorWall(T,m,7.2,2.35);mir.position.set(0,0,-2.62);g.add(mir);
+    // treadmill + elliptical rows facing mirrors
+    [-2.5,0,2.5].forEach(x=>{const t=treadmill(T,m);t.position.set(x,0,.3);t.rotation.y=Math.PI;g.add(t);});
+    [-2.5,2.5].forEach(x=>{const e=elliptical(T,m);e.position.set(x,0,1.7);e.rotation.y=Math.PI;g.add(e);});
+    // dumbbell rack along east wall
+    const rack=dumbbellRack(T,m);rack.position.set(3.4,0,-.6);rack.rotation.y=Math.PI/2;g.add(rack);
+    // weight bench west
+    const bench=weightBench(T,m);bench.position.set(-3.3,0,1.4);bench.rotation.y=Math.PI/2;g.add(bench);
+    // kettlebells row on south shelf area
+    for(let i=0;i<4;i++){const kb=kettlebell(T,m);kb.position.set(-3+i*.5,.02,2.55);g.add(kb);}
+    const sh=shelfUnit(T,m);sh.position.set(3.3,0,1.6);sh.rotation.y=-Math.PI/2;g.add(sh);
+    const pl=plant(T,m,1.2);pl.position.set(-3.4,0,-2.2);g.add(pl);
+    return g;
+  }
+  function buildYoga(T,m){
+    const g=hall(T,m,{w:6.5,d:5,finish:m.oak,wood:['s']});
+    const mir=mirrorWall(T,m,5.7,2.35);mir.position.set(0,0,-2.12);g.add(mir);
+    // punching bags in front of mirrors
+    [-1.8,-.2,1.4].forEach(x=>{const b=punchBag(T,m);b.position.set(x,0,-1);g.add(b);});
+    // yoga mats facing mirror
+    [[-2.1,.6],[0,.6],[2.1,.6],[-1.05,1.9],[1.05,1.9]].forEach(([x,z],i)=>{const mat=yogaMat(T,m,[0x3A4456,0x5A4A68,0x374B45,0x5A3D3D,0x4A4A56][i]);mat.position.set(x,0,z);g.add(mat);});
+    // exercise balls east corner
+    [0x8E84A8,0xB0A6C8,0x6E7E94].forEach((c,i)=>{const b=fitBall(T,m,.28-i*.02,c);b.position.set(2.6-i*.5,.02,-1.9);g.add(b);});
+    // step platforms
+    const s1=stepBox(T,m);s1.position.set(-2.5,0,-1.4);g.add(s1);
+    const s2=stepBox(T,m);s2.position.set(2.6,0,1.9);s2.rotation.y=.3;g.add(s2);
+    // spin bikes west
+    [0,1].forEach(i=>{const b=spinBike(T,m);b.position.set(-2.6,0,-.6-i*1.3);g.add(b);});
+    // towel + kettlebell shelf (south wood wall)
+    const sh=shelfUnit(T,m);sh.position.set(1.4,0,2.32);sh.rotation.y=Math.PI;g.add(sh);
+    return g;
+  }
+  function buildGames(T,m){
+    const g=hall(T,m,{w:6.5,d:4.5,finish:m.oak});
+    const rug=new T.Mesh(new T.PlaneGeometry(3.2,2.3),new T.MeshStandardMaterial({color:0x2C2A33,roughness:.95}));rug.rotation.x=-Math.PI/2;rug.position.y=.008;rug.receiveShadow=true;g.add(rug);
+    const tbl=billiards(T,m);tbl.position.set(-.2,0,.2);g.add(tbl);
+    const fb=foosball(T,m);fb.position.set(-2.55,0,-.3);fb.rotation.y=Math.PI/2;g.add(fb);
+    // TV + sofa lounge (south end)
+    const tv=tvUnit(T,m);tv.position.set(0,0,1.95);tv.rotation.y=0;g.add(tv);
+    const sf=sofa(T,m);sf.scale.setScalar(.85);sf.position.set(0,-.1,-1.7);sf.rotation.y=Math.PI;g.add(sf);
+    // dart board east wall
+    const dart=new T.Mesh(new T.CylinderGeometry(.22,.22,.03,20),m.fabRed);dart.rotation.z=Math.PI/2;dart.position.set(3.18,1.55,1.2);g.add(dart);
+    const dartIn=new T.Mesh(new T.CylinderGeometry(.16,.16,.035,20),m.fabNavy);dartIn.rotation.z=Math.PI/2;dartIn.position.set(3.16,1.55,1.2);g.add(dartIn);
     return g;
   }
   function buildSpa(T,m){
     const g=new T.Group();
-    const base=new T.Mesh(new T.BoxGeometry(4.6,.1,3.4),m.stone);base.position.y=.05;g.add(base);
-    for(let i=0;i<4;i++){const tb=new T.Mesh(new T.BoxGeometry(.9,.12,1.8),m.white);tb.position.set(-1.3+i*1.3,.18,0);g.add(tb);
-      const head=new T.Mesh(new T.CylinderGeometry(.12,.12,.1,10),m.white);head.position.set(-1.3+i*1.3,.28,.7);g.add(head);}
-    const steam=new T.Mesh(new T.CylinderGeometry(.5,.6,1.2,14),new T.MeshStandardMaterial({color:0xA78FC0,roughness:.4,transparent:true,opacity:.7}));steam.position.set(1.6,.6,-.8);g.add(steam);
-    const candle=(x,z)=>{const c=new T.Mesh(new T.CylinderGeometry(.04,.05,.14,8),new T.MeshStandardMaterial({color:0xF2E0AE,emissive:0xFFC870,emissiveIntensity:.6}));c.position.set(x,.14,z);g.add(c);};
-    candle(-1.3,-.6);candle(1.3,.6);
+    // travertine terrace
+    const base=new T.Mesh(new T.BoxGeometry(9,.14,5),m.travertine);base.position.y=-.07;base.receiveShadow=true;base.castShadow=true;g.add(base);
+    const top=new T.Mesh(new T.PlaneGeometry(8.9,4.9),m.travertine);top.rotation.x=-Math.PI/2;top.position.y=.005;top.receiveShadow=true;g.add(top);
+    // two jacuzzis
+    const j1=jacuzzi(T,m);j1.position.set(-2.1,0,-.3);g.add(j1);
+    const j2=jacuzzi(T,m);j2.position.set(1.5,0,-.3);g.add(j2);
+    g.userData.water=[j1.userData.water,j2.userData.water];
+    g.userData.bubbles=j1.userData.bubbles.concat(j2.userData.bubbles);
+    // folding linen screens to the north
+    const sc1=linenScreen(T,m);sc1.position.set(-2.1,0,-2);g.add(sc1);
+    const sc2=linenScreen(T,m);sc2.position.set(1.5,0,-2);g.add(sc2);
+    // curved white loungers south
+    [-2.1,1.5].forEach((x,i)=>{const l=lounger(T,m,m.fabWhite);l.position.set(x,0,1.85);l.rotation.y=Math.PI+(i?-.12:.12);g.add(l);});
+    // round stone tables
+    [-.3,3.3].forEach(x=>{const t=new T.Mesh(new T.CylinderGeometry(.3,.34,.32,20),m.travertine);t.position.set(x,.16,1.85);t.castShadow=true;g.add(t);});
+    // candles
+    [[-3.6,-1.6],[3.6,-1.6]].forEach(([x,z])=>{const c=new T.Mesh(new T.CylinderGeometry(.05,.06,.18,10),m.ledWarm);c.position.set(x,.1,z);g.add(c);});
+    // pergola: posts + shading slats over back half
+    for(const[x,z]of[[-4,-2.1],[4,-2.1],[-4,-.2],[4,-.2]]){const p=new T.Mesh(new T.BoxGeometry(.12,2.7,.12),m.teak);p.position.set(x,1.35,z);g.add(p);}
+    for(let i=0;i<13;i++){const sl=new T.Mesh(new T.BoxGeometry(8.6,.07,.16),m.teak);sl.position.set(0,2.72,-2.1+i*.16);sl.castShadow=true;g.add(sl);}
+    const p1=plant(T,m,1.25);p1.position.set(-3.9,0,2);g.add(p1);
+    const p2=plant(T,m,1.25);p2.position.set(3.9,0,2);g.add(p2);
+    return g;
+  }
+  function buildBoardroom(T,m){
+    const g=hall(T,m,{w:5,d:3.5,finish:m.oak});
+    const t=diningTable(T,m,false);t.scale.set(1.9,1,1.25);t.position.y=-.02;g.add(t);
+    for(let i=0;i<4;i++){const c=chair(T,m);c.position.set(-1.35+i*.9,0,-.85);c.rotation.y=Math.PI;g.add(c);
+      const c2=chair(T,m);c2.position.set(-1.35+i*.9,0,.85);g.add(c2);}
+    const scr=new T.Mesh(new T.PlaneGeometry(1.9,.95),m.screenDark);scr.position.set(0,1.35,-1.62);g.add(scr);
+    const cred=new T.Mesh(new T.BoxGeometry(2.4,.5,.4),m.darkwood);cred.position.set(0,.25,1.5);g.add(cred);
+    const pen=pendant(T,m,1.1);pen.position.set(0,0,0);g.add(pen);
     return g;
   }
   function buildRestaurant(T,m){
-    const g=new T.Group();
-    const floor=new T.Mesh(new T.BoxGeometry(5.6,.1,3.6),m.stone);floor.position.y=.05;g.add(floor);
-    for(let i=0;i<8;i++){const t=new T.Mesh(new T.BoxGeometry(1.0,.06,1.0),m.darkwood);t.position.y=.55;const side=i%2,idx=Math.floor(i/2);t.position.set(-1.7+idx*1.5,.55,side?-.9:.9);g.add(t);
-      for(let c=0;c<4;c++){const ch=new T.Group();const s=new T.Mesh(new T.BoxGeometry(.3,.04,.3),m.fabric);s.position.y=.42;ch.add(s);const b=new T.Mesh(new T.BoxGeometry(.3,.35,.04),m.fabric);b.position.set(0,.6,-.13);ch.add(b);
-        const cs=c%2,ci=Math.floor(c/2);ch.position.set((-1.7+idx*1.5)+(cs?.22:-.22),.2,(side?-.9:.9)+(ci?.22:-.22));ch.rotation.y=ci?Math.PI:0;g.add(ch);}}
-    const bar=new T.Mesh(new T.BoxGeometry(.5,.9,2.4),m.darkwood);bar.position.set(2.5,.45,0);g.add(bar);
-    for(let i=0;i<3;i++){const stool=new T.Mesh(new T.CylinderGeometry(.16,.16,.45,12),m.metal);stool.position.set(2.5,.22,-.7+i*.7);g.add(stool);}
-    return g;
-  }
-  function buildGym(T,m){
-    const g=new T.Group();
-    const base=new T.Mesh(new T.BoxGeometry(4,.08,3),m.stone);base.position.y=.04;g.add(base);
-    for(let i=0;i<3;i++){const tr=new T.Mesh(new T.BoxGeometry(1.6,.1,.4),m.black);tr.position.set(-1.2+i*1.2,.18,.8);g.add(tr);
-      const handle=new T.Mesh(new T.BoxGeometry(.04,.5,.04),m.metal);handle.position.set(-1.2+i*1.2,.4,.6);g.add(handle);}
-    for(let i=0;i<4;i++){const w=new T.Mesh(new T.CylinderGeometry(.3,.3,.08,14),m.metal);w.position.set(-.6+i*.5,.22,-.7);w.rotation.x=Math.PI/2;g.add(w);}
-    const bike=new T.Mesh(new T.BoxGeometry(.6,.8,.2),m.metal);bike.position.set(1.2,.4,-.6);g.add(bike);
+    const g=hall(T,m,{w:6,d:3.6,finish:m.travertine});
+    const spots=[[-1.8,-.7],[0,-.7],[1.8,-.7],[-.9,.8],[.9,.8]];
+    spots.forEach(([x,z])=>{const t=diningTable(T,m,true);t.position.set(x,0,z);g.add(t);
+      for(let i=0;i<3;i++){const a=i/3*Math.PI*2;const c=chair(T,m);c.position.set(x+Math.cos(a)*.75,0,z+Math.sin(a)*.75);c.rotation.y=-a+Math.PI;g.add(c);}});
+    const bar=new T.Mesh(new T.BoxGeometry(.5,.85,1.5),m.darkwood);bar.position.set(2.6,.43,0);g.add(bar);
+    const barTop=new T.Mesh(new T.BoxGeometry(.56,.06,1.6),m.whiteStone);barTop.position.set(2.6,.86,0);g.add(barTop);
+    for(let i=0;i<3;i++){const st=new T.Mesh(new T.CylinderGeometry(.15,.15,.5,14),m.black);st.position.set(2.1,.25,-.5+i*.5);g.add(st);}
+    [-1.8,0,1.8].forEach(x=>{const p=pendant(T,m,.7);p.position.set(x,0,-.7);g.add(p);});
+    const pl=plant(T,m,1.1);pl.position.set(-2.6,0,1.3);g.add(pl);
     return g;
   }
   function buildLobby(T,m){
-    const g=new T.Group();
-    const floor=new T.Mesh(new T.BoxGeometry(4.6,.1,2.8),m.stone);floor.position.y=.05;g.add(floor);
-    const desk=new T.Mesh(new T.BoxGeometry(2.2,.5,.6),m.darkwood);desk.position.set(0,.25,-.6);g.add(desk);
-    const deskTop=new T.Mesh(new T.BoxGeometry(2.4,.06,.7),m.stone);deskTop.position.set(0,.53,-.6);g.add(deskTop);
-    for(let i=0;i<2;i++){const c=new T.Group();const s=new T.Mesh(new T.BoxGeometry(.42,.05,.42),m.fabric);s.position.y=.42;c.add(s);const b=new T.Mesh(new T.BoxGeometry(.42,.5,.05),m.fabric);b.position.set(0,.68,-.18);c.add(s);c.position.set(-.9+i*1.8,.2,.6);g.add(c);}
-    const plant=makePlant(T,m);plant.position.set(-1.9,0,.8);g.add(plant);
-    const plant2=makePlant(T,m);plant2.position.set(1.9,0,.8);g.add(plant2);
+    const g=hall(T,m,{w:5,d:3,finish:m.travertine});
+    const desk=new T.Mesh(new T.BoxGeometry(2.3,.55,.6),m.darkwood);desk.position.set(0,.28,-1);desk.castShadow=true;g.add(desk);
+    const deskTop=new T.Mesh(new T.BoxGeometry(2.5,.07,.72),m.whiteStone);deskTop.position.set(0,.58,-1);g.add(deskTop);
+    const back=new T.Mesh(new T.BoxGeometry(2.5,1.6,.08),m.oakSlat);back.position.set(0,1.4,-1.32);g.add(back);
+    [-.9,.9].forEach(x=>{const s=sofa(T,m);s.scale.setScalar(.62);s.position.set(x,-.1,.75);s.rotation.y=0;g.add(s);});
+    const ct=new T.Mesh(new T.CylinderGeometry(.4,.4,.05,20),m.whiteStone);ct.position.set(0,.4,.75);g.add(ct);
+    const cts=new T.Mesh(new T.CylinderGeometry(.04,.04,.36,10),m.chrome);cts.position.set(0,.2,.75);g.add(cts);
+    const pl1=plant(T,m,1.3);pl1.position.set(-2.1,0,-1);g.add(pl1);
+    const pl2=plant(T,m,1.3);pl2.position.set(2.1,0,-1);g.add(pl2);
+    // halo chandelier
+    const ring=new T.Mesh(new T.TorusGeometry(.65,.03,12,40),m.ledWarm);ring.position.y=2.35;ring.rotation.x=Math.PI/2;g.add(ring);
+    for(let i=0;i<4;i++){const a=i/4*Math.PI*2;const c=new T.Mesh(new CylSafe(T,.012,.012,.5),m.mullion);c.position.set(Math.cos(a)*.6,2.62,Math.sin(a)*.6);g.add(c);}
     return g;
   }
-  function makePlant(T,m){
+  function CylSafe(T,r1,r2,h){return new T.CylinderGeometry(r1,r2,h,6);}
+  function buildParking(T,m){
     const g=new T.Group();
-    const pot=new T.Mesh(new T.CylinderGeometry(.16,.13,.28,14),m.stone);pot.position.y=.14;g.add(pot);
-    const leaves=new T.Mesh(new T.SphereGeometry(.3,10,8),m.green);leaves.position.y=.5;leaves.scale.set(1,1.2,1);g.add(leaves);
+    const lot=new T.Mesh(new T.BoxGeometry(8,.08,3.5),m.asphalt);lot.position.y=.06;lot.receiveShadow=true;g.add(lot);
+    for(let r=0;r<3;r++)for(let c=0;c<6;c++){const ln=new T.Mesh(new T.BoxGeometry(.04,.012,2.1),m.lineWhite);ln.position.set(-3.3+c*1.32,.106,-1.05+r*1.05);g.add(ln);}
+    const cols=[0xF2F0E8,0x1A1C20,0x8A94A4,0x2E4A6E,0x6E2E33,0x3E5A48];
+    for(let i=0;i<12;i++){const car=carUnit(T,m,cols[i%cols.length]);
+      car.position.set(-2.65+(i%6)*1.32,.1,-1.05+Math.floor(i/6)*1.05);car.rotation.y=Math.PI;g.add(car);}
+    const b1=new T.Mesh(new T.BoxGeometry(.08,1.4,.08),m.chrome);b1.position.set(-3.7,.7,1.4);g.add(b1);
+    const b2=b1.clone();b2.position.x=3.7;g.add(b2);
+    const arm=new T.Mesh(new T.BoxGeometry(3,.06,.06),m.chrome);arm.position.set(0,1.3,1.4);g.add(arm);
+    return g;
+  }
+  function carUnit(T,m,col){
+    const g=new T.Group();
+    const bodyMat=new T.MeshStandardMaterial({color:col,roughness:.28,metalness:.65,envMapIntensity:1.1});
+    const body=new T.Mesh(new T.BoxGeometry(.9,.38,1.75),bodyMat);body.position.y=.3;body.castShadow=true;g.add(body);
+    const lower=new T.Mesh(new T.BoxGeometry(.94,.16,1.8),m.rubber);lower.position.y=.16;g.add(lower);
+    const cab=new T.Mesh(new T.BoxGeometry(.76,.3,1),bodyMat);cab.position.set(0,.6,-.06);cab.castShadow=true;g.add(cab);
+    const win=(w2,h2,d2,x,y,z,rx)=>{const w=new T.Mesh(new T.BoxGeometry(w2,h2,d2),m.glass);w.position.set(x,y,z);if(rx)w.rotation.x=rx;g.add(w);};
+    win(.7,.26,.04,0,.6,.42,-.4);win(.7,.24,.04,0,.6,-.55,.4);
+    win(.03,.24,.66,.4,.58,-.06);win(.03,.24,.66,-.4,.58,-.06);
+    for(const wx of[-.42,.42])for(const wz of[-.66,.66]){const w=new T.Mesh(new T.CylinderGeometry(.15,.15,.13,14),m.black);w.rotation.z=Math.PI/2;w.position.set(wx,.12,wz);g.add(w);
+      const rim=new T.Mesh(new T.CylinderGeometry(.07,.07,.14,10),m.chrome);rim.rotation.z=Math.PI/2;rim.position.set(wx,.12,wz);g.add(rim);}
     return g;
   }
 
-  const BUILDERS={pool:buildPool,board:buildBoardroom,kids:buildKids,parking:buildParking,spa:buildSpa,restaurant:buildRestaurant,gym:buildGym,lobby:buildLobby};
+  const BUILDERS={pool:buildPool,board:buildBoardroom,kids:buildKids,parking:buildParking,spa:buildSpa,restaurant:buildRestaurant,gym:buildGym,lobby:buildLobby,yoga:buildYoga,games:buildGames};
 
   function makeMats(T){
-    const wood=woodTex(T), wall=wallTex(T), grass=grassTex(T), stone=stoneTex(T);
     return {
-      ground:new T.MeshStandardMaterial({map:grass,roughness:.95,envMapIntensity:.3}),
-      path:new T.MeshStandardMaterial({map:stone,color:0xBFAE8E,roughness:.85,envMapIntensity:.2}),
-      stone:new T.MeshStandardMaterial({map:stone,color:0xD9D2C4,roughness:.7,envMapIntensity:.4}),
-      wall:new T.MeshStandardMaterial({map:wall,color:0xEDE7DC,roughness:.85,envMapIntensity:.3}),
-      wood:new T.MeshStandardMaterial({map:wood,roughness:.5,metalness:.05,envMapIntensity:.5}),
-      darkwood:new T.MeshStandardMaterial({color:0x3B2A1E,roughness:.4,metalness:.1,envMapIntensity:.6}),
+      ground:new T.MeshStandardMaterial({map:grassTex(T),roughness:.95,envMapIntensity:.3}),
+      stone:new T.MeshStandardMaterial({map:stoneTex(T),color:0xD9D2C4,roughness:.7,envMapIntensity:.4}),
+      wall:new T.MeshStandardMaterial({map:wallTex(T),color:0xEDE7DC,roughness:.85,envMapIntensity:.3}),
+      wood:new T.MeshStandardMaterial({map:woodTex(T),roughness:.5,metalness:.05,envMapIntensity:.5}),
+      darkwood:new T.MeshStandardMaterial({map:woodTex(T),color:0x6B5340,roughness:.38,metalness:.1,envMapIntensity:.7}),
+      teak:new T.MeshStandardMaterial({map:woodTex(T),color:0xA88E6E,roughness:.45,envMapIntensity:.6}),
+      oak:new T.MeshStandardMaterial({map:oakPlankTex(T),roughness:.42,metalness:.03,envMapIntensity:.7}),
+      oakSlat:new T.MeshStandardMaterial({map:oakSlatTex(T),roughness:.46,envMapIntensity:.6}),
+      whiteStone:new T.MeshStandardMaterial({map:travertineTex(T),color:0xE7DED0,roughness:.5,envMapIntensity:.6}),
+      travertine:new T.MeshStandardMaterial({map:travertineTex(T),roughness:.48,metalness:.02,envMapIntensity:.7}),
+      mosaicPool:new T.MeshStandardMaterial({map:mosaicTex(T,'pool'),roughness:.18,envMapIntensity:1.0}),
+      mosaicKids:new T.MeshStandardMaterial({map:mosaicTex(T,'kids'),roughness:.2,envMapIntensity:.9}),
+      mosaicCol:new T.MeshStandardMaterial({map:mosaicTex(T,'col'),roughness:.3,envMapIntensity:.7}),
+      mosaicDeck:new T.MeshStandardMaterial({map:mosaicTex(T,'deck'),roughness:.42,envMapIntensity:.6}),
+      epdm:new T.MeshStandardMaterial({map:epdmTex(T),roughness:.92}),
+      asphalt:new T.MeshStandardMaterial({map:asphaltTex(T),roughness:.9,envMapIntensity:.2}),
+      sand:new T.MeshStandardMaterial({map:sandTex(T),color:0xF1DFB0,roughness:.95}),
       fabric:new T.MeshStandardMaterial({color:0xC9BFAE,roughness:.92}),
+      fabGrey:new T.MeshStandardMaterial({color:0xBDB9B0,roughness:.9}),
+      fabWhite:new T.MeshStandardMaterial({color:0xF1EEE7,roughness:.82}),
+      fabNavy:new T.MeshStandardMaterial({color:0x2F3C55,roughness:.85}),
+      fabBlue:new T.MeshStandardMaterial({color:0x5E7DA3,roughness:.85}),
+      fabBlush:new T.MeshStandardMaterial({color:0xC9A89E,roughness:.85}),
+      fabRed:new T.MeshStandardMaterial({color:0x8A3140,roughness:.8}),
+      felt:new T.MeshStandardMaterial({color:0x1E5C3E,roughness:.85}),
+      linen:new T.MeshStandardMaterial({color:0xE6DECC,roughness:.9,side:T.DoubleSide}),
+      leather:new T.MeshStandardMaterial({color:0x17181C,roughness:.55,envMapIntensity:.5}),
+      rubber:new T.MeshStandardMaterial({color:0x141519,roughness:.94}),
+      machineDark:new T.MeshStandardMaterial({color:0x262930,roughness:.42,metalness:.45,envMapIntensity:.9}),
+      black:new T.MeshStandardMaterial({color:0x17181C,roughness:.38,metalness:.35,envMapIntensity:.7}),
+      blackStone:new T.MeshStandardMaterial({color:0x1B1D20,roughness:.18,metalness:.1,envMapIntensity:1.2}),
+      white:new T.MeshStandardMaterial({color:0xF1EEE7,roughness:.6,envMapIntensity:.4}),
+      lineWhite:new T.MeshStandardMaterial({color:0xE8E4D8,roughness:.7}),
       metal:new T.MeshStandardMaterial({color:0xC9CCD1,roughness:.18,metalness:.95,envMapIntensity:1.3}),
-      white:new T.MeshStandardMaterial({color:0xF4F1EB,roughness:.7,envMapIntensity:.3}),
-      black:new T.MeshStandardMaterial({color:0x1A1A1A,roughness:.35,metalness:.4,envMapIntensity:.6}),
+      chrome:new T.MeshStandardMaterial({color:0xD8DCE0,roughness:.1,metalness:1,envMapIntensity:1.5}),
+      mullion:new T.MeshStandardMaterial({color:0x292620,roughness:.32,metalness:.7,envMapIntensity:1}),
       gold:new T.MeshStandardMaterial({color:0xC9A85A,roughness:.2,metalness:.95,envMapIntensity:1.4}),
-      green:new T.MeshStandardMaterial({color:0x4A6B4A,roughness:.75,envMapIntensity:.3}),
-      water:new T.MeshPhysicalMaterial({color:0x1A8AB5,roughness:.04,metalness:.0,transmission:.65,transparent:true,opacity:.78,ior:1.33,clearcoat:1,clearcoatRoughness:.03,envMapIntensity:1.5}),
+      green:new T.MeshStandardMaterial({color:0x3F6642,roughness:.78,envMapIntensity:.35}),
+      greenLight:new T.MeshStandardMaterial({color:0x55844B,roughness:.78,envMapIntensity:.35}),
+      palmTrunk:new T.MeshStandardMaterial({color:0x7A6248,roughness:.85}),
+      palmFrond:new T.MeshStandardMaterial({color:0x3E7A44,roughness:.7,side:T.DoubleSide}),
+      kidsAqua:new T.MeshStandardMaterial({color:0x45B7D1,roughness:.5}),
+      kidsRed:new T.MeshStandardMaterial({color:0xE2605A,roughness:.55}),
+      mirror:new T.MeshStandardMaterial({color:0xB6C7D2,roughness:.03,metalness:1,envMapIntensity:2}),
+      glass:new T.MeshPhysicalMaterial({color:0xCBDDF0,roughness:.04,metalness:0,transparent:true,opacity:.2,ior:1.45,clearcoat:1,clearcoatRoughness:.04,envMapIntensity:2,side:T.DoubleSide,depthWrite:false}),
+      poolDeep:new T.MeshStandardMaterial({color:0x0C3A48,roughness:.25,envMapIntensity:.7}),
+      waterPool:new T.MeshPhysicalMaterial({color:0x127C9C,roughness:.03,metalness:0,transparent:true,opacity:.72,ior:1.33,clearcoat:1,clearcoatRoughness:.02,envMapIntensity:1.05,emissive:0x0A424E,emissiveIntensity:.38}),
+      waterKids:new T.MeshPhysicalMaterial({color:0x22BBD6,roughness:.05,transparent:true,opacity:.9,ior:1.33,clearcoat:1,envMapIntensity:1.4,emissive:0x127E8E,emissiveIntensity:.5}),
+      waterJac:new T.MeshPhysicalMaterial({color:0x9FD8E4,roughness:.08,transparent:true,opacity:.82,ior:1.33,clearcoat:1,envMapIntensity:1.3,emissive:0x2E6B78,emissiveIntensity:.22}),
+      foam:new T.MeshBasicMaterial({color:0xFFFFFF,transparent:true,opacity:.7}),
+      ocean:new T.MeshPhysicalMaterial({color:0x13698A,roughness:.18,metalness:.05,transparent:true,opacity:.97,clearcoat:1,envMapIntensity:.7,emissive:0x072E40,emissiveIntensity:.18}),
+      soffit:new T.MeshStandardMaterial({color:0xEEE6D8,roughness:.82,emissive:0x3A2E1E,emissiveIntensity:.18}),
+      ledWarm:new T.MeshStandardMaterial({color:0xFFE7C2,emissive:0xFFC97D,emissiveIntensity:2.4,roughness:.4}),
+      ledCool:new T.MeshStandardMaterial({color:0xE6F6FF,emissive:0xCFECFF,emissiveIntensity:2.6,roughness:.3}),
+      screenGlow:new T.MeshStandardMaterial({color:0x0E2636,emissive:0x2E9BD6,emissiveIntensity:1.1,roughness:.3}),
+      screenDark:new T.MeshStandardMaterial({color:0x0A0F16,emissive:0x13283C,emissiveIntensity:.55,roughness:.25}),
     };
   }
-  function grassTex(T){const c=document.createElement('canvas');c.width=c.height=512;const x=c.getContext('2d');const g=x.createLinearGradient(0,0,0,512);g.addColorStop(0,'#7AA85E');g.addColorStop(1,'#5A8245');x.fillStyle=g;x.fillRect(0,0,512,512);for(let i=0;i<8000;i++){const sh=40+Math.random()*40;x.fillStyle=`rgba(${30+Math.random()*30},${60+Math.random()*40},${20+Math.random()*20},${.2+Math.random()*.3})`;x.fillRect(Math.random()*512,Math.random()*512,1,1+Math.random()*2);}for(let i=0;i<300;i++){x.strokeStyle=`rgba(${80+Math.random()*40},${120+Math.random()*40},${50+Math.random()*30},.25)`;x.lineWidth=1.5;x.beginPath();x.moveTo(Math.random()*512,Math.random()*512);x.lineTo(Math.random()*512,Math.random()*512);x.stroke();}const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;t.wrapS=t.wrapT=T.RepeatWrapping;t.repeat.set(4,3);t.anisotropy=8;return t;}
-  function woodTex(T){const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d');const g=x.createLinearGradient(0,0,0,256);g.addColorStop(0,'#6B4A2B');g.addColorStop(1,'#5E3F24');x.fillStyle=g;x.fillRect(0,0,256,256);for(let i=0;i<30;i++){x.strokeStyle='rgba(40,25,12,.15)';x.lineWidth=1+Math.random()*2;x.beginPath();x.moveTo(0,i*8);x.lineTo(256,i*8+4);x.stroke();}const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;t.wrapS=t.wrapT=T.RepeatWrapping;t.repeat.set(2,2);return t;}
-  function wallTex(T){const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');x.fillStyle='#EDE7DC';x.fillRect(0,0,128,128);for(let i=0;i<400;i++){x.fillStyle=`rgba(120,100,70,${Math.random()*.05})`;x.fillRect(Math.random()*128,Math.random()*128,1,1);}const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;t.wrapS=t.wrapT=T.RepeatWrapping;t.repeat.set(2,2);return t;}
-  function stoneTex(T){const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d');x.fillStyle='#D9D2C4';x.fillRect(0,0,256,256);for(let i=0;i<3000;i++){const sh=Math.random()*30-15;x.fillStyle=`rgba(${200+sh},${195+sh},${185+sh},${.3+Math.random()*.3})`;x.fillRect(Math.random()*256,Math.random()*256,2,2);}for(let i=0;i<80;i++){x.strokeStyle='rgba(150,140,120,.12)';x.lineWidth=1;x.beginPath();x.moveTo(Math.random()*256,Math.random()*256);x.lineTo(Math.random()*256,Math.random()*256);x.stroke();}const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;t.wrapS=t.wrapT=T.RepeatWrapping;t.repeat.set(3,3);return t;}
+
+  /* ---------- procedural texture library (all sRGB) ---------- */
+  function canvasTex(T,fn,repX,repY,size){const c=document.createElement('canvas');c.width=c.height=size||256;fn(c.getContext('2d'),c.width);const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;t.wrapS=t.wrapT=T.RepeatWrapping;if(repX)t.repeat.set(repX,repY);t.anisotropy=8;return t;}
+  function grassTex(T){return canvasTex(T,(x,s)=>{x.fillStyle='#6E9754';x.fillRect(0,0,s,s);for(let i=0;i<9000;i++){const sh=Math.random();x.fillStyle=sh<.5?`rgba(${50+Math.random()*26},${96+Math.random()*40},${36+Math.random()*22},${.25+Math.random()*.3})`:`rgba(${120+Math.random()*40},${150+Math.random()*40},${70+Math.random()*30},${.12+Math.random()*.18})`;x.fillRect(Math.random()*s,Math.random()*s,1.2,1.2+Math.random()*2);}},18,12,512);}
+  function woodTex(T){return canvasTex(T,(x,s)=>{const g=x.createLinearGradient(0,0,0,s);g.addColorStop(0,'#6B4A2B');g.addColorStop(1,'#5E3F24');x.fillStyle=g;x.fillRect(0,0,s,s);for(let i=0;i<30;i++){x.strokeStyle='rgba(40,25,12,.15)';x.lineWidth=1+Math.random()*2;x.beginPath();x.moveTo(0,i*8);x.lineTo(s,i*8+4);x.stroke();}},2,2);}
+  function wallTex(T){return canvasTex(T,(x,s)=>{x.fillStyle='#EDE7DC';x.fillRect(0,0,s,s);for(let i=0;i<400;i++)x.fillStyle=`rgba(120,100,70,${Math.random()*.05})`,x.fillRect(Math.random()*s,Math.random()*s,1,1);},2,2,128);}
+  function stoneTex(T){return canvasTex(T,(x,s)=>{x.fillStyle='#D9D2C4';x.fillRect(0,0,s,s);for(let i=0;i<3000;i++){const sh=Math.random()*30-15;x.fillStyle=`rgba(${200+sh},${195+sh},${185+sh},${.3+Math.random()*.3})`;x.fillRect(Math.random()*s,Math.random()*s,2,2);}for(let i=0;i<80;i++){x.strokeStyle='rgba(150,140,120,.12)';x.beginPath();x.moveTo(Math.random()*s,Math.random()*s);x.lineTo(Math.random()*s,Math.random()*s);x.stroke();}},3,3);}
+  function travertineTex(T){return canvasTex(T,(x,s)=>{const g=x.createLinearGradient(0,0,s,s);g.addColorStop(0,'#E2D6C0');g.addColorStop(.5,'#D8CBB2');g.addColorStop(1,'#E6DBC7');x.fillStyle=g;x.fillRect(0,0,s,s);for(let i=0;i<46;i++){x.strokeStyle=`rgba(150,128,96,${.05+Math.random()*.08})`;x.lineWidth=.6+Math.random()*1.4;x.beginPath();let yy=Math.random()*s;x.moveTo(0,yy);for(let px=0;px<=s;px+=24)x.lineTo(px,yy+Math.sin(px*.05+i)*6+(Math.random()-.5)*5);x.stroke();}for(let i=0;i<1400;i++){x.fillStyle=`rgba(120,100,70,${Math.random()*.05})`;x.fillRect(Math.random()*s,Math.random()*s,1.4,1.4);}},4,4);}
+  function oakPlankTex(T){return canvasTex(T,(x,s)=>{x.fillStyle='#CDBDA2';x.fillRect(0,0,s,s);const pw=40;for(let r=0;r<s/pw;r++){const sh=(Math.random()-.5)*14;x.fillStyle=`rgb(${205+sh},${189+sh},${162+sh})`;x.fillRect(0,r*pw,s,pw);x.fillStyle='rgba(90,70,45,.3)';x.fillRect(0,r*pw,s,1.4);const off=(r%2)*pw;for(let px=off;px<s;px+=pw*1.6)x.fillRect(px,r*pw,1.4,pw);for(let g2=0;g2<14;g2++){x.strokeStyle='rgba(120,95,60,.07)';x.beginPath();x.moveTo(0,r*pw+Math.random()*pw);x.bezierCurveTo(s*.3,r*pw+Math.random()*pw,s*.6,r*pw+Math.random()*pw,s,r*pw+Math.random()*pw);x.stroke();}}},5,5);}
+  function oakSlatTex(T){return canvasTex(T,(x,s)=>{x.fillStyle='#C8B091';x.fillRect(0,0,s,s);const sw=26;for(let i=0;i<s/sw;i++){const sh=(Math.random()-.5)*16;x.fillStyle=`rgb(${200+sh},${176+sh},${145+sh})`;x.fillRect(i*sw,0,sw-3,s);for(let g2=0;g2<10;g2++){x.strokeStyle='rgba(110,85,50,.08)';x.beginPath();x.moveTo(i*sw+4+Math.random()*(sw-8),0);x.lineTo(i*sw+4+Math.random()*(sw-8),s);x.stroke();}}},4,3);}
+  function mosaicTex(T,kind){
+    const cfgs={pool:{a:['#0E5E6E','#12707F','#0B5260','#14687A'],ts:10,grout:'rgba(220,236,236,.28)',rep:[10,10]},
+      kids:{a:['#2FA9BD','#3CBBC7','#2798A8','#57C9D2'],ts:12,grout:'rgba(230,245,245,.3)',rep:[7,5]},
+      col:{a:['#8E9499','#7F868C','#99A0A5','#868D93'],ts:14,grout:'rgba(235,235,230,.4)',rep:[2,5]},
+      deck:{a:['#C7C0B4','#BDB6AA','#D0CAC0','#C2BBB0'],ts:11,grout:'rgba(240,238,232,.55)',rep:[16,12]}};
+    const c=cfgs[kind],colors=c.a;
+    const t=canvasTex(T,(x,s)=>{x.fillStyle=colors[0];x.fillRect(0,0,s,s);
+      for(let yy=0;yy<s;yy+=c.ts)for(let xx=0;xx<s;xx+=c.ts){x.fillStyle=colors[(Math.random()*colors.length)|0];x.fillRect(xx,yy,c.ts,c.ts);
+        x.fillStyle='rgba(255,255,255,.05)';x.fillRect(xx,yy,c.ts,1);}
+      x.strokeStyle=c.grout;x.lineWidth=1;for(let p=0;p<=s;p+=c.ts){x.beginPath();x.moveTo(p,0);x.lineTo(p,s);x.stroke();x.beginPath();x.moveTo(0,p);x.lineTo(s,p);x.stroke();}},c.rep[0],c.rep[1],128);
+    return t;
+  }
+  function epdmTex(T){return canvasTex(T,(x,s)=>{x.fillStyle='#DCD2BC';x.fillRect(0,0,s,s);const cols=['#E2605A','#4FA8D8','#6FBF62','#F2C84B'];for(let i=0;i<2600;i++){x.fillStyle=cols[(Math.random()*4)|0];x.globalAlpha=.5+Math.random()*.4;const r=1+Math.random()*2.4;x.beginPath();x.arc(Math.random()*s,Math.random()*s,r,0,7);x.fill();}x.globalAlpha=1;},7,6);}
+  function asphaltTex(T){return canvasTex(T,(x,s)=>{x.fillStyle='#33353A';x.fillRect(0,0,s,s);for(let i=0;i<5000;i++){const sh=Math.random()*40;x.fillStyle=`rgba(${60+sh},${62+sh},${68+sh},${.25+Math.random()*.3})`;x.fillRect(Math.random()*s,Math.random()*s,1.6,1.6);}},5,3);}
+  function sandTex(T){return canvasTex(T,(x,s)=>{const g=x.createLinearGradient(0,0,0,s);g.addColorStop(0,'#EBDCBE');g.addColorStop(1,'#E0CEA6');x.fillStyle=g;x.fillRect(0,0,s,s);for(let i=0;i<4000;i++){x.fillStyle=`rgba(180,160,120,${Math.random()*.12})`;x.fillRect(Math.random()*s,Math.random()*s,1.4,1.4);}},8,4);}
 
   function makeLabel(T,text,color){
     const c=document.createElement('canvas');c.width=256;c.height=64;const x=c.getContext('2d');
@@ -4073,12 +4529,12 @@ const FAC3D=(()=>{
       oldCanvas.remove();
     }
     stage.innerHTML='';
-    const scene=new T.Scene();scene.fog=new T.Fog(0xBFD4EA,28,72);
+    const scene=new T.Scene();scene.fog=new T.Fog(0xD9E7F1,58,145);
     const cam=new T.PerspectiveCamera(45,stage.clientWidth/stage.clientHeight,.1,300);
     const renderer=new T.WebGLRenderer({antialias:true,alpha:true,powerPreference:'high-performance'});
     renderer.setSize(stage.clientWidth,stage.clientHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2));
     renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;
-    renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.1;
+    renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.0;
     renderer.outputColorSpace=T.SRGBColorSpace;stage.appendChild(renderer.domElement);
 
     const m=makeMats(T);
@@ -4089,53 +4545,88 @@ const FAC3D=(()=>{
     const envGeo=new T.SphereGeometry(60,32,16);
     const envMat=new T.MeshBasicMaterial({side:T.BackSide});
     const ec=document.createElement('canvas');ec.width=512;ec.height=512;const ex=ec.getContext('2d');
-    const eg=ex.createLinearGradient(0,0,0,512);eg.addColorStop(0,'#8DB8E0');eg.addColorStop(.45,'#C8DDF0');eg.addColorStop(.55,'#E8DCC0');eg.addColorStop(1,'#6B8A5A');ex.fillStyle=eg;ex.fillRect(0,0,512,512);
+    const eg=ex.createLinearGradient(0,0,0,512);eg.addColorStop(0,'#7FB0DC');eg.addColorStop(.42,'#C4D9EE');eg.addColorStop(.5,'#F2E6CE');eg.addColorStop(.58,'#86BCCB');eg.addColorStop(1,'#2C6E8C');ex.fillStyle=eg;ex.fillRect(0,0,512,512);
     const sunG=ex.createRadialGradient(380,160,8,380,160,180);sunG.addColorStop(0,'rgba(255,245,220,.95)');sunG.addColorStop(1,'rgba(255,245,220,0)');ex.fillStyle=sunG;ex.fillRect(0,0,512,512);
     const envTex=new T.CanvasTexture(ec);envTex.colorSpace=T.SRGBColorSpace;envTex.mapping=T.EquirectangularReflectionMapping;envMat.map=envTex;
     envScene.add(new T.Mesh(envGeo,envMat));
     const envRT=pmrem.fromScene(envScene,.04);scene.environment=envRT.texture;
     pmrem.dispose();envTex.dispose();envMat.dispose();envGeo.dispose();
+    // soft coastal sky backdrop (equirect gradient + sun glow)
+    const bc=document.createElement('canvas');bc.width=64;bc.height=512;const bx2=bc.getContext('2d');
+    const bg=bx2.createLinearGradient(0,0,0,512);
+    bg.addColorStop(0,'#5E97CC');bg.addColorStop(.42,'#93BCE3');bg.addColorStop(.5,'#CDDFEE');bg.addColorStop(.525,'#E6E5DA');bg.addColorStop(.56,'#8FBECE');bg.addColorStop(1,'#3E86A8');
+    bx2.fillStyle=bg;bx2.fillRect(0,0,64,512);
+    const bgSun=bx2.createRadialGradient(48,250,4,48,250,150);bgSun.addColorStop(0,'rgba(255,246,224,.85)');bgSun.addColorStop(1,'rgba(255,246,224,0)');bx2.fillStyle=bgSun;bx2.fillRect(0,0,64,512);
+    const bgTex=new T.CanvasTexture(bc);bgTex.colorSpace=T.SRGBColorSpace;bgTex.mapping=T.EquirectangularReflectionMapping;scene.background=bgTex;
 
     scene.add(new T.AmbientLight(0xFFFFFF,.45));
     scene.add(new T.HemisphereLight(0xFFF5E0,0x6B7A50,.6));
     const sun=new T.DirectionalLight(0xFFE9C4,2.2);sun.position.set(16,26,12);sun.castShadow=true;
-    sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-34;sun.shadow.camera.right=34;sun.shadow.camera.top=34;sun.shadow.camera.bottom=-34;sun.shadow.camera.near=1;sun.shadow.camera.far=80;sun.shadow.bias=-.0003;sun.shadow.normalBias=.02;scene.add(sun);
+    sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-40;sun.shadow.camera.right=40;sun.shadow.camera.top=40;sun.shadow.camera.bottom=-40;sun.shadow.camera.near=1;sun.shadow.camera.far=90;sun.shadow.bias=-.0003;sun.shadow.normalBias=.02;scene.add(sun);
     const fill=new T.DirectionalLight(0xBCD4FF,.35);fill.position.set(-12,14,-8);scene.add(fill);
     const warmFill=new T.PointLight(0xFFD9A0,.4,40,1.5);warmFill.position.set(0,8,0);scene.add(warmFill);
 
-    const R={stage,scene,cam,renderer,sun,mats:m,facs:[],staff:[],sel:null,auto:true,camT:{th:.6,ph:.7,tr:32},camC:{th:.6,ph:.7,tr:32},t0:performance.now()};
+    const R={stage,scene,cam,renderer,sun,mats:m,facs:[],staff:[],sel:null,auto:true,camT:{th:.6,ph:.62,tr:42},camC:{th:.6,ph:.62,tr:42},tgtT:new T.Vector3(0,.9,0),tgtC:new T.Vector3(0,.9,0),t0:performance.now()};
     cam.position.set(0,14,24);cam.lookAt(0,0,0);
 
-    // ground with grass texture — deep base
-    const ground=new T.Mesh(new T.BoxGeometry(46,.4,36),m.ground);ground.position.y=-.2;ground.receiveShadow=true;scene.add(ground);
-    // stone plaza around the central path
-    const plazaMat=new T.MeshStandardMaterial({map:stoneTex(T),color:0xCFC8B8,roughness:.7,envMapIntensity:.3});
-    const plaza=new T.Mesh(new T.BoxGeometry(44,.06,34),plazaMat);plaza.position.y=.01;plaza.receiveShadow=true;scene.add(plaza);
-    // central walkway — warm stone pavers
-    const pathTex=stoneTex(T);pathTex.repeat.set(8,1);
-    const pathMat2=new T.MeshStandardMaterial({map:pathTex,color:0xBFAE8E,roughness:.85,envMapIntensity:.2});
-    scene.add(box(T,pathMat2,44,.04,2.4,0,.03,0));
-    const pathTex2=stoneTex(T);pathTex2.repeat.set(1,8);
-    const pathMat3=new T.MeshStandardMaterial({map:pathTex2,color:0xBFAE8E,roughness:.85,envMapIntensity:.2});
-    scene.add(box(T,pathMat3,2.4,.04,34,0,.03,0));
+    // ---- coastal resort site: grass island, travertine plaza, sand beach, sea ----
+    // ground + plaza are framed around the indoor pool opening (world hx,hz)
+    const PHX=-12.3,PHZ=-4.7,PHW=4.25,PHD=2.25;
+    const addFrame=(W,D,cx0,cz0,yy,hh,mat)=>{
+      const xL=cx0-W/2,xR=cx0+W/2,zL=cz0-D/2,zR=cz0+D/2;
+      const mk=(w2,d2,x,z)=>{const b=new T.Mesh(new T.BoxGeometry(w2,hh,d2),mat);b.position.set(x,yy,z);b.receiveShadow=true;scene.add(b);};
+      mk(W,PHZ-PHD-zL,0,(zL+PHZ-PHD)/2);
+      mk(W,zR-(PHZ+PHD),0,(zR+PHZ+PHD)/2);
+      mk(PHX-PHW-xL,PHD*2,(xL+PHX-PHW)/2,PHZ);
+      mk(xR-(PHX+PHW),PHD*2,(xR+PHX+PHW)/2,PHZ);
+    };
+    addFrame(200,80,0,-20,-.2,.4,m.ground);
+    addFrame(42,32,0,1,.01,.06,m.travertine);
+    // axial paver walks threading the pavilions
+    const paverMat=new T.MeshStandardMaterial({map:travertineTex(T),color:0xCBBEA8,roughness:.78,envMapIntensity:.35});
+    scene.add(box(T,paverMat,2.6,.03,32,0,.045,1));
+    scene.add(box(T,paverMat,42,.03,2.6,0,.045,1.5));
+    // asphalt valet apron (parking pavilion sits at x=3,z=14)
+    const apron=new T.Mesh(new T.BoxGeometry(9.4,.08,4.6),m.asphalt);apron.position.set(3,.05,14);apron.receiveShadow=true;scene.add(apron);
+    // sand beach along the south shore
+    const sand=new T.Mesh(new T.BoxGeometry(96,.06,12),m.sand);sand.position.set(0,.015,22);sand.receiveShadow=true;scene.add(sand);
+    // open sea beyond the beach
+    const ocean=new T.Mesh(new T.PlaneGeometry(140,44),m.ocean);ocean.rotation.x=-Math.PI/2;ocean.position.set(0,-.07,42);ocean.userData.baseOp=.96;scene.add(ocean);R.ocean=ocean;
+    // soft shoreline foam + distant breakers
+    R.foam=[];
+    [[0,27.6,60,.55],[0,31.5,90,.28],[0,37,110,.2],[0,44,130,.16]].forEach(([x,z,w2,op],i)=>{
+      const fm=new T.Mesh(new T.PlaneGeometry(w2,.35),new T.MeshBasicMaterial({color:0xFFFFFF,transparent:true,opacity:op,depthWrite:false}));
+      fm.rotation.x=-Math.PI/2;fm.position.set(x,-.02,z);fm.userData.baseOp=op;fm.userData.phase=i*1.7;scene.add(fm);R.foam.push(fm);});
     for(const f of FACILITIES){
       const grp=new T.Group();grp.position.set(f.pos[0],0,f.pos[2]);
       grp.userData={fac:f};
       const slab=new T.Mesh(new T.BoxGeometry(f.sz[0]+.6,.08,f.sz[1]+.6),new T.MeshStandardMaterial({color:0xE8E2D4,roughness:.85}));
-      slab.position.y=.04;slab.receiveShadow=true;grp.add(slab);
-      const pickPlane=new T.Mesh(new T.PlaneGeometry(f.sz[0]+1.2,f.sz[1]+1.2),new T.MeshBasicMaterial({transparent:true,opacity:0}));
+      slab.position.y=.04;slab.receiveShadow=true;
+      // pool/kids builders own a real (recessed or tray) floor — skip the covering plinth
+      if(f.id==='pool'||f.id==='kids')slab.visible=false;
+      grp.add(slab);
+      const pickPlane=new T.Mesh(new T.PlaneGeometry(f.sz[0]+1.2,f.sz[1]+1.2),new T.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false}));
       pickPlane.rotation.x=-Math.PI/2;pickPlane.position.y=.05;pickPlane.userData={fac:f};grp.add(pickPlane);
       const prop=(BUILDERS[f.id]||buildLobby)(T,m);grp.add(prop);
+      if(prop.userData.water)grp.userData.water=prop.userData.water;
+      if(prop.userData.bubbles)grp.userData.bubbles=prop.userData.bubbles;
       const halo=new T.Mesh(new T.RingGeometry(Math.max(f.sz[0],f.sz[1])*.7,Math.max(f.sz[0],f.sz[1])*.7+.18,32),new T.MeshBasicMaterial({color:f.color,transparent:true,opacity:.35,side:T.DoubleSide}));
       halo.rotation.x=-Math.PI/2;halo.position.y=.09;grp.add(halo);
       const label=makeLabel(T,f.name,f.color);label.position.set(0,3.4,0);grp.add(label);
       // staff
-      const roleColors={Reception:0x3A5A85,Concierge:0x5A8F6A,Bell:0xB8864A,Lifeguard:0xE0615A,'Pool attendant':0x3A8FB7,Bartender:0x8A4A6B,'AV tech':0x4A5568,'F&B service':0xB8864A,Childcare:0xE0A83B,'First-aid':0x96414F,Valet:0x2A2A2A,Security:0x1A1A1A,Therapist:0x9B7BBF,Laundry:0x7A8B9A,Chef:0xF2E0AE,Waiter:0x5A8F6A,Host:0xC9A85A,Runner:0x8A7E6E,Trainer:0x5A8F6A,Cleaner:0x4A5568};
+      const roleColors={Reception:0x3A5A85,Concierge:0x5A8F6A,Bell:0xB8864A,Lifeguard:0xE0615A,'Pool attendant':0x3A8FB7,Bartender:0x8A4A6B,'AV tech':0x4A5568,'F&B service':0xB8864A,Childcare:0xE0A83B,'First-aid':0x96414F,Valet:0x2A2A2A,Security:0x1A1A1A,Therapist:0x9B7BBF,Laundry:0x7A8B9A,Chef:0xF2E0AE,Waiter:0x5A8F6A,Host:0xC9A85A,Runner:0x8A7E6E,Trainer:0x5A8F6A,Cleaner:0x4A5568,'Yoga instructor':0x7B6BA8,'Games host':0x9A5566,Server:0x5E7080};
       f.roles.forEach(([role,n])=>{for(let i=0;i<n;i++){const s=makeStaff(T,roleColors[role]||0x8A7E6E);s.userData.role=role;s.userData.fac=f.id;s.position.set((Math.random()-.5)*(f.sz[0]-1),0,(Math.random()-.5)*(f.sz[1]-1));s.userData.tar=new T.Vector3(s.position.x,s.position.y,s.position.z);s.userData.phase=Math.random()*Math.PI*2;grp.add(s);R.staff.push(s);}});
       scene.add(grp);
       R.facs.push({grp,f,halo,label,slab});
     }
-    // landscape trees — realistic trunk + 3-layer gradient canopy
+    // royal palms — curated: beach front + outside the glass pavilions
+    const palmSpots=[
+      [-18,19.6,1.3],[-10,20.4,1.15],[-2,19.3,1.4],[7,20.5,1.25],[15,19.7,1.35],[10,18.2,1.1],
+      [-15.2,-10,1.25],[-19.4,-6.2,1.2],[-21,8,1.2],[18.2,-8.2,1.15],
+      [-19.2,1.5,1.25],[16.9,.2,1.1],[7.6,-4.4,1.0],[-4.6,-12.6,1.05],[-17.6,12.8,1.2],[-6.2,15.2,1.1],
+    ];
+    palmSpots.forEach(([x,z,s])=>{const p=palm(T,m,s);p.position.set(x,0,z);p.rotation.y=Math.random()*Math.PI;scene.add(p);});
+    // landscape trees — realistic trunk + 3-layer gradient canopy (background greenery)
     const trunkGeo=new T.CylinderGeometry(.08,.14,.8,8);
     const trunkMat=new T.MeshStandardMaterial({color:0x5A3F2A,roughness:.85,envMapIntensity:.2});
     const leafMats=[
@@ -4143,9 +4634,14 @@ const FAC3D=(()=>{
       new T.MeshStandardMaterial({color:0x3E6B3A,roughness:.75,envMapIntensity:.4}),
       new T.MeshStandardMaterial({color:0x5A8A48,roughness:.75,envMapIntensity:.4}),
     ];
-    for(let i=0;i<28;i++){
-      const tx=(Math.random()-.5)*42,tz=(Math.random()-.5)*32;
-      if(FACILITIES.some(f=>Math.abs(tx-f.pos[0])<f.sz[0]*.7&&Math.abs(tz-f.pos[2])<f.sz[1]*.7))continue;
+    const nearFac=(x,z,pad)=>FACILITIES.some(f=>Math.abs(x-f.pos[0])<f.sz[0]/2+pad&&Math.abs(z-f.pos[2])<f.sz[1]/2+pad);
+    let planted=0,guard=0;
+    while(planted<22&&guard++<120){
+      const band=Math.random();
+      const tx=band<.62?(Math.random()-.5)*66:(Math.random()<.5?-22-Math.random()*12:22+Math.random()*12);
+      const tz=band<.62?-16-Math.random()*15:(Math.random()-.5)*26;
+      if(tz>18)continue; // keep the beach for palms
+      if(nearFac(tx,tz,2))continue;
       const tree=new T.Group();
       const trunk=new T.Mesh(trunkGeo,trunkMat);trunk.position.y=.4;trunk.castShadow=true;tree.add(trunk);
       for(let j=0;j<3;j++){
@@ -4157,7 +4653,8 @@ const FAC3D=(()=>{
         tree.add(leaves);
       }
       const bush=new T.Mesh(new T.SphereGeometry(.3,10,8),leafMats[2]);bush.position.set(0,.15,0);bush.scale.set(1.2,.5,1.2);tree.add(bush);
-      tree.position.set(tx,0,tz);tree.rotation.y=Math.random()*Math.PI;tree.scale.setScalar(.9+Math.random()*.4);scene.add(tree);
+      tree.position.set(tx,0,tz);tree.rotation.y=Math.random()*Math.PI;tree.scale.setScalar(1.05+Math.random()*.55);scene.add(tree);
+      planted++;
     }
 
     function box(T,mat,w,h,d,x,y,z){const b=new T.Mesh(new T.BoxGeometry(w,h,d),mat);b.position.set(x,y,z);b.receiveShadow=true;return b;}
@@ -4172,7 +4669,14 @@ const FAC3D=(()=>{
     }
     function select(fac){
       R.sel=fac;
-      R.facs.forEach(F=>{F.halo.material.opacity=F.f===fac?.id?.7:.3;F.slab.material.emissive=new T.Color(F.f===fac?.id?F.f.color:0);F.slab.material.emissiveIntensity=F.f===fac?.id?.25:0;});
+      clearTimeout(R.autoT);
+      if(fac){R.tgtT.set(fac.pos[0],.5,fac.pos[2]);R.camT.tr=Math.max(fac.sz[0],fac.sz[1])*1.15+5;R.camT.ph=.68;R.auto=false;}
+      else{R.tgtT.set(0,.9,0);R.camT.tr=42;R.auto=true;}
+      R.facs.forEach(F=>{const on=F.f.id===fac?.id;
+        F.halo.material.opacity=on?.7:.3;F.slab.material.emissive=new T.Color(on?F.f.color:0);F.slab.material.emissiveIntensity=on?.25:0;
+        // dollhouse cutaway: lift the selected pavilion's roof so interiors read clearly
+        F.grp.traverse(o=>{if(o.userData&&o.userData.roof)o.visible=!on;});
+      });
       const panel=$('#fac-panel');if(!panel)return;
       if(!fac){panel.innerHTML=`<div class="hk-rp-empty"><span class="hk-rp-ic">${icon('mapPin')}</span><b>Select a facility</b><small>Click any zone on the 3D resort map to see live staff allocation.</small></div>`;return;}
       const pct=Math.round(fac.occ/fac.cap*100);
@@ -4206,11 +4710,11 @@ const FAC3D=(()=>{
     // pointer
     const cv=renderer.domElement;cv.style.touchAction='none';
     let down=null,drag=false;
-    const wake=()=>{R.auto=false;clearTimeout(R.autoT);R.autoT=setTimeout(()=>{if(R)R.auto=true;},8000);};
+    const wake=()=>{R.auto=false;clearTimeout(R.autoT);R.autoT=setTimeout(()=>{if(R&&!R.sel)R.auto=true;},8000);};
     cv.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY,th:R.camT.th,ph:R.camT.ph};drag=false;cv.setPointerCapture(e.pointerId);wake();});
     cv.addEventListener('pointermove',e=>{if(down){const dx=e.clientX-down.x,dy=e.clientY-down.y;if(!drag&&Math.hypot(dx,dy)>5)drag=true;if(drag){R.camT.th=down.th-dx*.005;R.camT.ph=Math.max(.2,Math.min(1.3,down.ph-dy*.004));wake();}}});
     cv.addEventListener('pointerup',e=>{if(down&&!drag){const f=pick(e);if(f)select(f.id===R.sel?.id?null:f);}down=null;drag=false;});
-    cv.addEventListener('wheel',e=>{if(!(e.ctrlKey||e.metaKey))return;e.preventDefault();R.camT.tr=Math.max(12,Math.min(60,R.camT.tr*(1+e.deltaY*.0012)));wake();},{passive:false});
+    cv.addEventListener('wheel',e=>{if(!(e.ctrlKey||e.metaKey))return;e.preventDefault();R.camT.tr=Math.max(10,Math.min(78,R.camT.tr*(1+e.deltaY*.0012)));wake();},{passive:false});
 
     R.ro=new ResizeObserver(()=>{renderer.setSize(stage.clientWidth,stage.clientHeight);cam.aspect=stage.clientWidth/stage.clientHeight;cam.updateProjectionMatrix();});
     R.ro.observe(stage);
@@ -4221,8 +4725,9 @@ const FAC3D=(()=>{
       if(R.auto)R.camT.th+=.0012;
       R.camC.th+=(R.camT.th-R.camC.th)*.07;R.camC.ph+=(R.camT.ph-R.camC.ph)*.07;R.camC.tr+=(R.camT.tr-R.camC.tr)*.07;
       const r=R.camC.tr,ph=R.camC.ph,th=R.camC.th;
-      cam.position.set(Math.sin(th)*Math.cos(ph)*r,Math.sin(ph)*r+2,Math.cos(th)*Math.cos(ph)*r);
-      cam.lookAt(0,0,0);
+      R.tgtC.x+=(R.tgtT.x-R.tgtC.x)*.06;R.tgtC.y+=(R.tgtT.y-R.tgtC.y)*.06;R.tgtC.z+=(R.tgtT.z-R.tgtC.z)*.06;
+      cam.position.set(R.tgtC.x+Math.sin(th)*Math.cos(ph)*r,R.tgtC.y+Math.sin(ph)*r+.6,R.tgtC.z+Math.cos(th)*Math.cos(ph)*r);
+      cam.lookAt(R.tgtC);
       // staff walk
       R.staff.forEach(s=>{
         const fac=FACILITIES.find(f=>f.id===s.userData.fac);if(!fac)return;
@@ -4231,20 +4736,34 @@ const FAC3D=(()=>{
         const dir=new T.Vector3().subVectors(s.userData.tar,s.position);dir.y=0;
         if(dir.length()>0.02){const sp=.012;s.position.x+=dir.x*sp;s.position.z+=dir.z*sp;s.rotation.y=Math.atan2(dir.x,dir.z);s.userData.phase+=.18;const sw=Math.sin(s.userData.phase)*.5;s.userData.legL.rotation.x=sw;s.userData.legR.rotation.x=-sw;s.userData.armL.rotation.x=-sw;s.userData.armR.rotation.x=sw;s.position.y=Math.abs(Math.sin(s.userData.phase*2))*.02;}
       });
-      // pool water ripple animation
-      R.facs.forEach(F=>{if(F.grp.userData.water){const w=F.grp.userData.water;w.position.y=.22+Math.sin(t*1.8)*.008;w.material.opacity=.7+Math.sin(t*1.2)*.05;}});
+      // water ripple + jacuzzi bubble animation
+      R.facs.forEach(F=>{
+        const ud=F.grp.userData;
+        if(ud.water){
+          const ws=Array.isArray(ud.water)?ud.water:[ud.water];
+          ws.forEach((w,i)=>{w.position.y=w.userData.baseY+Math.sin(t*1.8+i*1.7)*.008;w.material.opacity=Math.max(.25,Math.min(.95,w.userData.baseOp+Math.sin(t*1.2+i*2.1)*.04));});
+        }
+        if(ud.bubbles)ud.bubbles.forEach((b,i)=>{
+          if(b.userData.baseY===undefined)b.userData.baseY=b.position.y;
+          const ph=i*.61;
+          b.position.y=b.userData.baseY+Math.abs(Math.sin(t*3.2+ph))*.06;
+          b.scale.setScalar(1+Math.sin(t*4.5+ph)*.22);
+        });
+      });
+      // breathing shoreline foam
+      if(R.foam)R.foam.forEach(f=>{f.material.opacity=f.userData.baseOp*(.75+.25*Math.sin(t*.9+f.userData.phase));});
       renderer.render(scene,cam);
     }
     tick();
 
-    R.select=select;R.setView=(az,ph)=>{R.camT.th=az*Math.PI/180;R.camT.ph=Math.max(.2,Math.min(1.3,ph*Math.PI/180));wake();};
+    R.select=select;R.setView=(az,ph)=>{R.camT.th=az*Math.PI/180;R.camT.ph=Math.max(.2,Math.min(1.3,ph*Math.PI/180));R.tgtT.set(0,.9,0);wake();};
     return R;
   }
 
   function boot(){
     const stage=$('#fac3d-stage');if(!stage)return;destroy();
     const start=ok=>{if(!ok){stage.innerHTML='<div class="hk-rp-empty" style="padding:40px"><b>WebGL unavailable</b><small>3D facility map needs a WebGL-capable browser.</small></div>';return;}
-      try{rt=create(stage);rt.select(FACILITIES[0]);}catch(e){stage.innerHTML='<div class="hk-rp-empty" style="padding:40px"><b>Could not load 3D</b><small>'+(e.message||'').slice(0,80)+'</small></div>';}};
+      try{rt=create(stage);rt.select(FACILITIES[0]);rt.facs.forEach(F=>F.grp.traverse(o=>{if(o.userData&&o.userData.roof)o.visible=true;}));rt.tgtT.set(0,.9,0);rt.tgtC.set(0,.9,0);rt.camT.tr=42;rt.camC.tr=42;window.__fac3dRT=rt;}catch(e){console.error('FAC3DERR',e&&e.stack?e.stack:e);stage.innerHTML='<div class="hk-rp-empty" style="padding:40px"><b>Could not load 3D</b><small>'+(e.message||'').slice(0,80)+'</small></div>';}};
     if(window.THREE){start(true);return;}
     stage.innerHTML='<div class="hk3d-boot"><span class="hk3d-boot-ring"></span><b>Composing the resort map…</b><small>WebGL engine loading</small></div>';
     withThree(start);
@@ -4255,6 +4774,7 @@ const FAC3D=(()=>{
     // force WebGL context loss to free GPU resources and avoid context conflicts
     try{const gl=rt.renderer.getContext();if(gl&&gl.getExtension('WEBGL_lose_context'))gl.getExtension('WEBGL_lose_context').loseContext();}catch(e){}
     rt.scene.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)(Array.isArray(o.material)?o.material:[o.material]).forEach(mm=>{if(mm.map)mm.map.dispose();mm.dispose();});});
+    if(rt.scene.background)rt.scene.background.dispose();
     rt.renderer.dispose();
     if(rt.renderer.domElement&&rt.renderer.domElement.parentNode)rt.renderer.domElement.parentNode.removeChild(rt.renderer.domElement);
     rt=null;
@@ -6081,7 +6601,7 @@ VIEWS.facilities = () => {
   <div class="row">
     <div class="c-8 rise">
       <div class="card room3d-card" style="margin-bottom:14px">
-        <div class="card-h"><div><div class="card-title">Resort facilities · live map</div><div class="card-sub">8 zones · ${totalStaff} staff allocated · live occupancy</div></div>
+        <div class="card-h"><div><div class="card-title">Resort facilities · live map</div><div class="card-sub">${FAC3D.facilities.length} zones · ${totalStaff} staff allocated · live occupancy</div></div>
           <div class="chips"><span class="tag tag-green">${icon('check')}All open</span><span class="tag tag-gold">${totalOcc} guests on-site</span></div></div>
         <div class="hk3d-stage room3d-stage" id="fac3d-stage"></div>
       </div>

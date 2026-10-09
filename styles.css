@@ -1067,7 +1067,7 @@ html[data-theme="dark"] .tt-gold .tt-ic{color:var(--gold-2)}
 
 /* ---------- Housekeeping · 3D live twin ---------- */
 .hk3d-stage{
-  position:relative;height:620px;overflow:hidden;margin-top:14px;
+  position:relative;height:clamp(380px,62vh,620px);overflow:hidden;margin-top:14px;
   border-top:1px solid var(--line);border-radius:0 0 var(--radius) var(--radius);
 }
 .hk3d-stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab}
@@ -1153,7 +1153,7 @@ html[data-theme="dark"] .hk3d-modebtn{color:var(--gold-2)}
 .hk3d-boot-ring{width:44px;height:44px;border-radius:50%;border:2px solid var(--line-2);border-top-color:var(--gold);animation:hkSpin .9s linear infinite}
 @keyframes hkSpin{to{transform:rotate(360deg)}}
 @media (max-width:980px){
-  .hk3d-stage{height:470px}
+  .hk3d-stage{height:clamp(300px,54vh,470px)}
   .hk-chip{padding:5px 8px;font-size:10px;gap:6px}
   .hk3d-floors button{min-width:38px;font-size:9.5px;padding:4px 5px}
   .hk3d-hint{display:none}
