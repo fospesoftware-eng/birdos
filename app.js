@@ -7,8 +7,22 @@
 /* ---------------- Utils ---------------- */
 const $  = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
-const money  = n => '$' + Math.round(n).toLocaleString('en-US');
-const moneyK = n => '$' + (n >= 1000 ? (n / 1000).toFixed(n % 1000 ? 1 : 0) + 'k' : n);
+const money  = n => '£' + Math.round(n).toLocaleString('en-GB');
+const moneyK = n => '£' + (n >= 1000 ? (n / 1000).toFixed(n % 1000 ? 1 : 0) + 'k' : n);
+/* Reusable KPI card — shared across all views */
+const kpi=(ic,label,val,cur,suf,dec,delta,note,sparkV,icColor)=>`
+    <div class="card kpi-card hover">
+      <div class="kpi-top">
+        <span class="kpi-ic" style="color:var(--${icColor});background:var(--${icColor}-soft)">${icon(ic)}</span>
+        <span class="kpi-label">${label}</span>
+      </div>
+      <div class="kpi-value"><span class="cur">${cur}</span><span data-count="${val}" data-decimals="${dec}" data-suffix="${suf}">0</span></div>
+      <div class="kpi-foot">
+        <span class="delta up">${icon('arrowUp')}${delta}</span>
+        <span class="spark">${spark(sparkV)}</span>
+      </div>
+      <div class="kpi-note" style="margin-top:6px">${note}</div>
+    </div>`;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 const rng = mulberry32(20261008);
@@ -97,6 +111,7 @@ const PATHS = {
   heart:'<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5 0 0 0 0-7.78z"/>',
   cake:'<path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"/><path d="M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2.5 2 4 2 2-1 2-1M2 21h20M7 8v3M12 8v3M17 8v3M7 4h.01M12 4h.01M17 4h.01"/>',
   car:'<path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/>',
+  plane:'<path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>',
   globe:'<circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
   card:'<rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/>',
   cash:'<rect x="2" y="6" width="20" height="12" rx="2.5"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/>',
@@ -157,9 +172,11 @@ const PROPERTY = {
    The active property drives the topbar chip, housekeeping data, and 3D twins. */
 const PROPERTIES = [
   {id:'aurelia', name:'Aurelia Royal Sands', brand:'BirdOS Collection', location:'Baa Atoll · Maldives', keys:342,
-   gm:'Alexandre Laurent', weather:'29°C · Clear skies', sunset:'18:04', accent:'gold'},
+   gm:'Alexandre Laurent', weather:'29°C · Clear skies', sunset:'18:04', accent:'gold',
+   airport:{code:'MAN',name:'Manchester Airport',city:'Manchester',iata:'MAN',tz:'Europe/London'}},
   {id:'novotel', name:'Novotel Grand Saigon', brand:'Accor · Novotel', location:'Nguyễn Tất Thành · Saigon', keys:248,
-   gm:'Camille Đỗ', weather:'31°C · Partly cloudy', sunset:'17:48', accent:'teal'},
+   gm:'Camille Đỗ', weather:'31°C · Partly cloudy', sunset:'17:48', accent:'teal',
+   airport:{code:'SGN',name:'Tân Sơn Nhất International',city:'Ho Chi Minh City',iata:'SGN',tz:'Asia/Ho_Chi_Minh'}},
 ];
 const activeProperty=()=>{ try{ const id=localStorage.getItem('birdos-property'); return PROPERTIES.find(p=>p.id===id)||PROPERTIES[0]; }catch(e){ return PROPERTIES[0]; } };
 const setProperty=id=>{ try{ localStorage.setItem('birdos-property',id); }catch(e){} };
@@ -191,7 +208,7 @@ const GUESTS = [
   {id:3,name:'Diego Fernández',tier:'Noir',room:'Pavilion 402',status:'arriving',time:'13:50',nights:3,pax:4,rate:2680,balance:2680,source:'Direct',prefs:['Two children','Kids club','High floor'],note:'Family · birthday cake for child on 9 Oct'},
   {id:4,name:'Amara Okafor',tier:'Pearl',room:'Room 312',status:'arriving',time:'15:05',nights:5,pax:2,rate:1480,balance:1480,source:'Booking.com',prefs:['Feather-free','Early breakfast'],note:''},
   {id:5,name:'Yuki Tanaka',tier:'Pearl',room:'Room 315',status:'arriving',time:'18:10',nights:2,pax:1,rate:1560,balance:3120,source:'Expedia',prefs:['High floor','Silent room'],note:''},
-  {id:6,name:'Chen Wei',tier:'Noir',room:'Villa 503',status:'inhouse',time:'Since 5 Oct',nights:7,pax:2,rate:3980,balance:4280,source:'Direct',prefs:['Butler service','Whisky selection','Yoga 06:30'],note:'Folio open · spa spend $6,100 YTD'},
+  {id:6,name:'Chen Wei',tier:'Noir',room:'Villa 503',status:'inhouse',time:'Since 5 Oct',nights:7,pax:2,rate:3980,balance:4280,source:'Direct',prefs:['Butler service','Whisky selection','Yoga 06:30'],note:'Folio open · spa spend £6,100 YTD'},
   {id:7,name:'Lucas Meyer',tier:'Aureate',room:'Suite 405',status:'inhouse',time:'Since 6 Oct',nights:5,pax:2,rate:2240,balance:0,source:'Direct',prefs:['Surf guide','Extra espresso'],note:'Folio settled · tokenized card on file'},
   {id:8,name:'Omar Al-Farsi',tier:'Aureate',room:'Room 208',status:'inhouse',time:'Since 4 Oct',nights:9,pax:3,rate:1860,balance:1860,source:'GDS',prefs:['Airport transfer','Qibla direction'],note:''},
   {id:9,name:'Elena Petrova',tier:'Pearl',room:'Room 318',status:'inhouse',time:'Since 7 Oct',nights:4,pax:2,rate:1520,balance:760,source:'Booking.com',prefs:['Extra towels'],note:''},
@@ -247,25 +264,24 @@ const SPARKS = {
 };
 
 const PULSE = [
-  ['gold','Villa 501','Isabella Moreau checked in via Kiosk 1 — digital key delivered'],
-  ['green','F&B','L\'Or Bleu: table 12 opened a $2,480 sommelier pairing'],
+  ['green','F&B','L\'Or Bleu: table 12 opened a £2,480 sommelier pairing'],
   ['blue','Concierge','Airport seaplane RPL-204 landed — 6 guests inbound'],
   ['red','Housekeeping','Room 312 flagged urgent turn · Priya assigned'],
-  ['gold','Revenue','Aves raised BAR for 18 Oct to $2,140 (+8%)'],
+  ['gold','Revenue','Aves raised BAR for 18 Oct to £2,140 (+8%)'],
   ['green','Spa','Overwater couple treatment completed · NPS 10'],
   ['blue','Guest messaging','Sofia Rinaldi confirmed overwater dinner, 20:30'],
-  ['green','Payments','$18,240 auto-reconciled across 4 merchant batches'],
+  ['green','Payments','£18,240 auto-reconciled across 4 merchant batches'],
   ['red','Engineering','Pool pavilion 401: thermostat offline — ticket #T-2091'],
-  ['gold','Upsell','12 pool-upgrade offers accepted this morning · $31,400'],
+  ['gold','Upsell','12 pool-upgrade offers accepted this morning · £31,400'],
 ];
 
 const FEED = [
   ['checkCircle','green','14:12','Isabella Moreau','Completed mobile check-in · key active','Villa 501'],
-  ['bell','gold','14:04','Aves AI','Sent pool-pavilion upgrades to 14 eligible guests','$12,400'],
-  ['card','blue','13:58','Payments','Auto-settled 11 folios from last night','$46,280'],
+  ['bell','gold','14:04','Aves AI','Sent pool-pavilion upgrades to 14 eligible guests','£12,400'],
+  ['card','blue','13:58','Payments','Auto-settled 11 folios from last night','£46,280'],
   ['car','amber','13:41','Concierge','Seaplane RPL-118 departed with 8 guests','On time'],
   ['brush','red','13:30','Housekeeping','Room 312 moved to priority turn','Due 15:00'],
-  ['wine','gold','13:12','Ember Bar','Table 07 opened a 1982 Bordeaux pairing','$3,900'],
+  ['wine','gold','13:12','Ember Bar','Table 07 opened a 1982 Bordeaux pairing','£3,900'],
   ['star','green','12:54','Reputation','New 10/10 review posted · Booking.com','Published'],
   ['key','blue','12:40','Front Desk','Digital key reissued to Chen Wei','Villa 503'],
   ['droplet','amber','12:22','Engineering','Spa pool pH rebalanced · back to range','28.6°C'],
@@ -274,7 +290,7 @@ const FEED = [
 
 const NOTIFS = [
   ['alert','red','Butler alert','Isabella Moreau arrives at 14:20 — anniversary amenity due in Villa 501','12m'],
-  ['trend','gold','Revenue approval','Aves recommends +8% BAR for 18 Oct (comp set $2,360)','34m'],
+  ['trend','gold','Revenue approval','Aves recommends +8% BAR for 18 Oct (comp set £2,360)','34m'],
   ['key','blue','Kiosk 2','Session paused: passport scan needs staff assistance','41m'],
   ['star','green','New review','“The finest resort experience we have ever had.” · 10/10 · Booking.com','1h'],
   ['brush','amber','Housekeeping','8 rooms still dirty against 4 departures expected before 15:00','2h'],
@@ -287,6 +303,48 @@ const KIOSKS = [
   {id:'K3',name:'Spa Pavilion',loc:'Wellness Village',st:'online',sessions:19,sec:68,bat:88,net:'Wi-Fi 6'},
   {id:'K4',name:'Beach Club',loc:'East Shore',st:'idle',sessions:24,sec:90,bat:41,net:'5G'},
   {id:'K5',name:'Residences Tower',loc:'West Wing',st:'online',sessions:16,sec:77,bat:96,net:'Wi-Fi 6'},
+];
+
+/* ---------- Transfers · Pickup & Drop Dispatch ----------
+   Live airline arrivals board (with guest names) + arrival pickups & departure drop-offs.
+   Airport is driven by the active property (default: Manchester MAN). */
+const FLIGHTS = [
+  {f:'BA 1387',air:'British Airways',orig:'London Heathrow (LHR)',sched:'08:25',est:'08:22',status:'landed',term:'T2',belt:'Belt 4',pax:142,gate:'A12',guests:['Eleanor Voss','Henry Clarke']},
+  {f:'LH 942',air:'Lufthansa',orig:'Frankfurt (FRA)',sched:'08:40',est:'08:43',status:'on-time',term:'T1',belt:'Belt 1',pax:186,gate:'B07',guests:['Chen Wei','Yuki Tanaka']},
+  {f:'EK 17',air:'Emirates',orig:'Dubai (DXB)',sched:'09:05',est:'09:18',status:'delayed',term:'T2',belt:'Belt 3',pax:354,gate:'A21',guests:['Isabella Moreau','Marcus Tanaka','Aisha Khan']},
+  {f:'AF 1562',air:'Air France',orig:'Paris CDG (CDG)',sched:'09:15',est:'09:12',status:'landing',term:'T1',belt:'Belt 1',pax:168,gate:'B03',guests:['Rosa Meier','Gabriel Fontaine']},
+  {f:'UA 928',air:'United Airlines',orig:'New York Newark (EWR)',sched:'09:30',est:'09:35',status:'on-time',term:'T2',belt:'Belt 5',pax:242,gate:'A18',guests:['Léo Costa','Amara Okafor']},
+  {f:'QR 21',air:'Qatar Airways',orig:'Doha (DOH)',sched:'09:50',est:'09:58',status:'delayed',term:'T2',belt:'Belt 2',pax:298,gate:'A09',guests:['Fatima Al-Rashid','Noah Bennett']},
+  {f:'FR 2831',air:'Ryanair',orig:'Dublin (DUB)',sched:'10:05',est:'10:02',status:'landed',term:'T1',belt:'Belt 6',pax:180,gate:'B14',guests:['Seamus O\'Brien']},
+  {f:'SQ 52',air:'Singapore Airlines',orig:'Singapore (SIN)',sched:'10:20',est:'10:20',status:'on-time',term:'T2',belt:'Belt 3',pax:266,gate:'A15',guests:['Aisha Nazim','Kenji Mori']},
+  {f:'TK 1995',air:'Turkish Airlines',orig:'Istanbul (IST)',sched:'10:35',est:'10:42',status:'delayed',term:'T1',belt:'Belt 1',pax:224,gate:'B09',guests:['Marco Silva','Elif Demir']},
+  {f:'DL 52',air:'Delta',orig:'Atlanta (ATL)',sched:'10:50',est:'10:50',status:'on-time',term:'T2',belt:'Belt 4',pax:210,gate:'A22',guests:['Grace Okafor','Nina Petrova']},
+  {f:'IB 3696',air:'Iberia',orig:'Madrid (MAD)',sched:'11:05',est:'11:00',status:'landing',term:'T1',belt:'Belt 2',pax:176,gate:'B05',guests:['Carmen Ruiz']},
+  {f:'EY 11',air:'Etihad',orig:'Abu Dhabi (AUH)',sched:'11:20',est:'11:20',status:'on-time',term:'T2',belt:'Belt 5',pax:288,gate:'A11',guests:['Ravi Menon','Sofia Rinaldi']},
+];
+
+const DRIVERS = [
+  {id:'D1',n:'James Whitfield',veh:'Mercedes S-Class · M20 JWH',st:'available',trips:7,rating:4.9,zone:'City Centre'},
+  {id:'D2',n:'Omar Haddad',veh:'BMW 7 Series · M18 OMH',st:'on-trip',trips:9,rating:4.8,zone:'Airport T1'},
+  {id:'D3',n:'Priya Nair',veh:'Audi Q7 · M19 PNR',st:'available',trips:5,rating:5.0,zone:'Airport T2'},
+  {id:'D4',n:'Lucas Meyer',veh:'Range Rover · M17 LMR',st:'break',trips:6,rating:4.7,zone:'Depot'},
+  {id:'D5',n:'Sofia Lindqvist',veh:'Mercedes V-Class · M20 SLQ',st:'on-trip',trips:8,rating:4.9,zone:'Airport T2'},
+  {id:'D6',n:'Daniel Okafor',veh:'Tesla Model X · M21 DOK',st:'available',trips:4,rating:4.8,zone:'City Centre'},
+];
+
+const PICKUPS = [
+  {id:'P-2041',guest:'Isabella Moreau',room:'Villa 501',pax:2,bag:3,flight:'EK 17',st:'queued',driver:null,eta:'—'},
+  {id:'P-2042',guest:'Chen Wei',room:'Suite 405',pax:1,bag:1,flight:'LH 942',st:'assigned',driver:'D1',eta:'12 min'},
+  {id:'P-2043',guest:'Marcus Tanaka',room:'Villa 308',pax:4,bag:6,flight:'EK 17',st:'assigned',driver:'D3',eta:'18 min'},
+  {id:'P-2044',guest:'Rosa Meier',room:'Garden 220',pax:2,bag:2,flight:'AF 1562',st:'in-transit',driver:'D2',eta:'Arrived'},
+  {id:'P-2045',guest:'Léo Costa',room:'Pool Villa',pax:3,bag:4,flight:'UA 928',st:'queued',driver:null,eta:'—'},
+];
+
+const DROPOFFS = [
+  {id:'D-3101',guest:'Eleanor Voss',room:'Villa 204',pax:2,bag:3,flight:'BA 1388',dep:'14:30',st:'queued',driver:null,eta:'—'},
+  {id:'D-3102',guest:'Henry Clarke',room:'Suite 312',pax:1,bag:2,flight:'LH 943',dep:'15:00',st:'assigned',driver:'D6',eta:'20 min'},
+  {id:'D-3103',guest:'Gabriel Fontaine',room:'Garden 118',pax:3,bag:5,flight:'AF 1563',dep:'15:45',st:'in-transit',driver:'D5',eta:'Airport'},
+  {id:'D-3104',guest:'Seamus O\'Brien',room:'Villa 410',pax:2,bag:2,flight:'FR 2832',dep:'16:10',st:'queued',driver:null,eta:'—'},
 ];
 
 const TEAM = [
@@ -388,7 +446,8 @@ const VIEW_META = {
   reservations:['Reservation Graph','14-day horizon · 342 keys'],
   frontdesk:['Front Desk','Arrivals, in-house & departures'],
   kiosks:['Kiosks & Keyless','Self check-in fleet · digital keys'],
-  hospitalitytv:['Hospitality TV','In-room TV fleet · greetings & broadcast control'],
+  airport:['Transfers','Airport arrivals · guest names · pickups & drop-offs · driver dispatch'],
+  hospitalitytv:['Hospitality TV','Room + public screens · live guide · upsell · PPV · guest services'],
   housekeeping:['Housekeeping & Facilities','Rooms, engineering & smart facilities'],
   floorplan:['3D Floor Plans','Studio · Deluxe · Suite · 1 BHK · ultra-realistic interiors'],
   facilities:['Facility Management','3D resort map · pool, boardrooms, parking · live staff'],
@@ -532,14 +591,14 @@ const MODULES = {
     purpose:'Commission-free bookings on the hotel\'s own branded site, editable without a developer.',
     kpis:[{l:'Direct bookings',v:'342',d:'+12%'},{l:'Conversion',v:'4.8%',d:'+0.6pt'},{l:'Abandoned carts',v:'68',d:'-9%'},{l:'Languages',v:'7',d:'en · fr · de…'}],
     cols:['Room type','Guest','Check-in','Nights','Rate','Source'],
-    rows:[['Ocean Villa','A. Dubois','08 Oct','4','$612','direct'],['Garden Suite','M. Tanaka','09 Oct','2','$448','promo'],['Beach Villa','S. Okonkwo','10 Oct','6','$780','direct'],['Family Loft','R. Meier','11 Oct','3','$520','member'],['Pool Villa','L. Costa','12 Oct','5','$910','direct']],
+    rows:[['Ocean Villa','A. Dubois','08 Oct','4','£612','direct'],['Garden Suite','M. Tanaka','09 Oct','2','£448','promo'],['Beach Villa','S. Okonkwo','10 Oct','6','£780','direct'],['Family Loft','R. Meier','11 Oct','3','£520','member'],['Pool Villa','L. Costa','12 Oct','5','£910','direct']],
     connects:['Rates & Pricing','Payments','Deposits & Refunds','Guest Portal'],
     scope:'Booking engine, rate plans, extras, promo codes, confirmations. Abandoned-bot & Google free-booking-links feed in v1.1.'},
   ota:{no:3,phase:'Phase 1 · Launch',ic:'layers',title:'OTA Channel Integration',
     purpose:'One inventory sold across Booking.com, Expedia and others with no double bookings.',
-    kpis:[{l:'Channel bookings',v:'184',d:'+4%'},{l:'Commission',v:'$18.2k',d:'-2.1pt'},{l:'Parity breaches',v:'3',d:'-5'},{l:'Connected channels',v:'6',d:'all live'}],
+    kpis:[{l:'Channel bookings',v:'184',d:'+4%'},{l:'Commission',v:'£18.2k',d:'-2.1pt'},{l:'Parity breaches',v:'3',d:'-5'},{l:'Connected channels',v:'6',d:'all live'}],
     cols:['Channel','Bookings','Net revenue','Commission','VC charge','Sync'],
-    rows:[['Booking.com','72','$38,410','18%','yes','2m ago'],['Expedia','46','$24,880','17%','yes','5m ago'],['Agoda','28','$15,120','16%','yes','1m ago'],['Trip.com','22','$11,960','15%','no','3m ago'],['Despegar','16','$8,420','19%','yes','8m ago']],
+    rows:[['Booking.com','72','£38,410','18%','yes','2m ago'],['Expedia','46','£24,880','17%','yes','5m ago'],['Agoda','28','£15,120','16%','yes','1m ago'],['Trip.com','22','£11,960','15%','no','3m ago'],['Despegar','16','£8,420','19%','yes','8m ago']],
     connects:['Rates & Pricing','Front Desk','Deposits & Refunds','Guest Messages'],
     scope:'Two-way availability/rates/restrictions sync, virtual-card handling, channel-mix & commission reports.'},
   portal:{no:5,phase:'Phase 1 · Launch',ic:'smartphone',title:'Guest Portal & Digital Check-in',
@@ -551,16 +610,16 @@ const MODULES = {
     scope:'Manage booking, online check-in with ID + face match, upsells, live folio, express check-out, refund visibility.'},
   payments:{no:6,phase:'Phase 1 · Launch',ic:'card',title:'Payments, Folios & Card Terminals',
     purpose:'Every charge and payment per stay, split across up to 4 folios, paid online or at the desk.',
-    kpis:[{l:'Today\'s takings',v:'$48.9k',d:'+6%'},{l:'Open folios',v:'128',d:'live'},{l:'Pre-auth held',v:'$92.4k',d:'-3%'},{l:'Cashier shifts',v:'4',d:'balanced'}],
+    kpis:[{l:'Today\'s takings',v:'£48.9k',d:'+6%'},{l:'Open folios',v:'128',d:'live'},{l:'Pre-auth held',v:'£92.4k',d:'-3%'},{l:'Cashier shifts',v:'4',d:'balanced'}],
     cols:['Folio','Guest','Payer','Charges','Payments','Balance'],
-    rows:[['F-10412','A. Dubois','guest','$2,880','$2,880','settled'],['F-10415','M. Tanaka','company','$1,420','$0','$1,420'],['F-10419','S. Okonkwo','guest','$4,120','$2,000','$2,120'],['F-10422','R. Meier','split','$980','$980','settled'],['F-10430','L. Costa','guest','$5,340','$3,000','$2,340']],
+    rows:[['F-10412','A. Dubois','guest','£2,880','£2,880','settled'],['F-10415','M. Tanaka','company','£1,420','£0','£1,420'],['F-10419','S. Okonkwo','guest','£4,120','£2,000','£2,120'],['F-10422','R. Meier','split','£980','£980','settled'],['F-10430','L. Costa','guest','£5,340','£3,000','£2,340']],
     connects:['Front Desk','Deposits & Refunds','Restaurant POS','Financials'],
     scope:'Up to 4 folios with routing rules, card/Apple/Google Pay/cash/bank transfer, pre-auths, pay links, company billing, cashier shifts.'},
   refunds:{no:7,phase:'Phase 1 · Launch',ic:'refresh',title:'Deposits, Cancellations & Refunds',
     purpose:'One set of rules for deposits, cancellations, no-shows and refunds — every refund traceable to the bank.',
-    kpis:[{l:'Refunds this week',v:'23',d:'-4'},{l:'Refund value',v:'$14.8k',d:'-12%'},{l:'Pending approvals',v:'3',d:'>£250'},{l:'No-show charges',v:'7',d:'auto'}],
+    kpis:[{l:'Refunds this week',v:'23',d:'-4'},{l:'Refund value',v:'£14.8k',d:'-12%'},{l:'Pending approvals',v:'3',d:'>£250'},{l:'No-show charges',v:'7',d:'auto'}],
     cols:['Ref #','Guest','Type','Amount','Status','Method'],
-    rows:[['R-9921','A. Dubois','cancellation','$612','completed','original card'],['R-9924','M. Tanaka','goodwill','$120','approved','voucher'],['R-9927','S. Okonkwo','deposit release','$400','processing','bank transfer'],['R-9930','R. Meier','overpayment','$45','completed','original card'],['R-9933','L. Costa','cancellation','$910','requested','original card']],
+    rows:[['R-9921','A. Dubois','cancellation','£612','completed','original card'],['R-9924','M. Tanaka','goodwill','£120','approved','voucher'],['R-9927','S. Okonkwo','deposit release','£400','processing','bank transfer'],['R-9930','R. Meier','overpayment','£45','completed','original card'],['R-9933','L. Costa','cancellation','£910','requested','original card']],
     connects:['Rates','Website','OTA','Payments','Night Audit','Financials'],
     scope:'Deposit & cancellation rules, no-show auto-charge, refund types with role approval limits, status tracking, chargeback evidence log.'},
   maintenance:{no:9,phase:'Phase 1 · Launch',ic:'wrench',title:'Maintenance & Repairs',
@@ -579,7 +638,7 @@ const MODULES = {
     scope:'Night audit checklist, no-show processing, exception queue, shift handover notes, audit report to owners.'},
   compliance:{no:12,phase:'Phase 1 · Launch',ic:'shield',title:'Compliance & Data Protection',
     purpose:'Guest register, UK GDPR, levies and a full audit trail of who did what.',
-    kpis:[{l:'Guest register',v:'100%',d:'complete'},{l:'PII views (7d)',v:'38',d:'+4'},{l:'Levy collected',v:'$6,240',d:'this month'},{l:'Audit events',v:'12.4k',d:'immutable'}],
+    kpis:[{l:'Guest register',v:'100%',d:'complete'},{l:'PII views (7d)',v:'38',d:'+4'},{l:'Levy collected',v:'£6,240',d:'this month'},{l:'Audit events',v:'12.4k',d:'immutable'}],
     cols:['Item','Rule','Status','Last run'],
     rows:[['Guest register','UK immigration','complete','03:02'],['GDPR consent','art. 7','98%','today'],['Data retention','24m policy','on track','weekly'],['Tourism levy','5% per night','collected','03:02'],['PCI scope','SAQ-A','passed','quarterly']],
     connects:['Front Desk','Guest Portal','Financials','Settings'],
@@ -593,9 +652,9 @@ const MODULES = {
     scope:'Import from common PMS formats, field mapping, reconciliation report, go-live checklist, post-cutover support.'},
   inroom:{no:16,phase:'Phase 2 · Grow',ic:'qr',title:'In-Room Ordering',
     purpose:'Guests order food and services from a QR code in the room, charged to the folio or paid now.',
-    kpis:[{l:'Orders today',v:'86',d:'+14%'},{l:'Avg order',v:'$38',d:'+$3'},{l:'Folio-charged',v:'62%',d:'+5pt'},{l:'Upsell rate',v:'24%',d:'+3pt'}],
+    kpis:[{l:'Orders today',v:'86',d:'+14%'},{l:'Avg order',v:'£38',d:'+£3'},{l:'Folio-charged',v:'62%',d:'+5pt'},{l:'Upsell rate',v:'24%',d:'+3pt'}],
     cols:['Room','Item','Qty','Total','Charge','Status'],
-    rows:[['412','In-villa dining','1','$68','folio','preparing'],['508','Spa — massage','1','$180','paid','booked'],['318','Minibar restock','1','$24','folio','delivered'],['220','Late breakfast','2','$56','folio','queued'],['604','Airport transfer','1','$120','paid','confirmed']],
+    rows:[['412','In-villa dining','1','£68','folio','preparing'],['508','Spa — massage','1','£180','paid','booked'],['318','Minibar restock','1','£24','folio','delivered'],['220','Late breakfast','2','£56','folio','queued'],['604','Airport transfer','1','£120','paid','confirmed']],
     connects:['Kitchen Display','Restaurant POS','Payments','Guest App'],
     scope:'QR menu, room-charge or instant payment, order tracking, upsells, allergen flags, delivery to room.'},
   kitchen:{no:17,phase:'Phase 2 · Grow',ic:'coffee',title:'Kitchen Display',
@@ -607,14 +666,14 @@ const MODULES = {
     scope:'KDS with course firing, bump bar, allergen highlights, timer SLA, recall, prep-time analytics.'},
   events:{no:19,phase:'Phase 2 · Grow',ic:'calendar',title:'Dining, Spa, Events & Experiences',
     purpose:'Book tables, treatments, meeting rooms, conferences and activities in one place.',
-    kpis:[{l:'Bookings today',v:'47',d:'+8'},{l:'Spa revenue',v:'$4.2k',d:'+11%'},{l:'Event revenue',v:'$18.6k',d:'+6%'},{l:'Utilisation',v:'82%',d:'+4pt'}],
+    kpis:[{l:'Bookings today',v:'47',d:'+8'},{l:'Spa revenue',v:'£4.2k',d:'+11%'},{l:'Event revenue',v:'£18.6k',d:'+6%'},{l:'Utilisation',v:'82%',d:'+4pt'}],
     cols:['Booking','Type','Guest','Date','Pax','Value'],
-    rows:[['Sunset dinner','dining','A. Dubois','08 Oct','2','$240'],['Couples massage','spa','M. Tanaka','09 Oct','2','$360'],['Conf. boardroom','event','Cubacle Ltd','10 Oct','12','$1,800'],['Snorkel trip','activity','S. Okonkwo','11 Oct','4','$480'],['Wine tasting','experience','R. Meier','12 Oct','6','$540']],
+    rows:[['Sunset dinner','dining','A. Dubois','08 Oct','2','£240'],['Couples massage','spa','M. Tanaka','09 Oct','2','£360'],['Conf. boardroom','event','Cubacle Ltd','10 Oct','12','£1,800'],['Snorkel trip','activity','S. Okonkwo','11 Oct','4','£480'],['Wine tasting','experience','R. Meier','12 Oct','6','£540']],
     connects:['Front Desk','Payments','Stock & Purchasing','Reports'],
     scope:'Reservations for restaurants, spa, meeting rooms, activities; capacity calendars, deposits, BEOs, resource booking.'},
   groups:{no:20,phase:'Phase 2 · Grow',ic:'users',title:'Group & Event Bookings',
     purpose:'Room blocks for weddings, conferences and tours with contracted rates and billing.',
-    kpis:[{l:'Active blocks',v:'9',d:'live'},{l:'Blocked rooms',v:'214',d:'+18'},{l:'Pick-up',v:'68%',d:'+5pt'},{l:'Group revenue',v:'$284k',d:'+9%'}],
+    kpis:[{l:'Active blocks',v:'9',d:'live'},{l:'Blocked rooms',v:'214',d:'+18'},{l:'Pick-up',v:'68%',d:'+5pt'},{l:'Group revenue',v:'£284k',d:'+9%'}],
     cols:['Group','Type','Arrival','Rooms','Picked up','Billing'],
     rows:[['Cubacle offsite','corporate','12 Oct','40','36','company'],['Wedding · Patel','social','18 Oct','60','42','split'],['Japan Tours','tour op','22 Oct','30','30','OTA VC'],['Medical conf.','association','28 Oct','50','28','company'],['Dive club','leisure','02 Nov','34','19','individual']],
     connects:['Front Desk','Rates','Payments','Reports'],
@@ -628,7 +687,7 @@ const MODULES = {
     scope:'Native iOS/Android, wallet keys, in-stay ordering, messaging, folio, express check-out, push alerts.'},
   loyalty:{no:23,phase:'Phase 2 · Grow',ic:'gift',title:'Loyalty, Gift Cards & Marketing',
     purpose:'Bring guests back with tiers, points and vouchers, and sell gift cards online.',
-    kpis:[{l:'Active members',v:'8,420',d:'+142'},{l:'Points issued',v:'1.2M',d:'this month'},{l:'Gift cards sold',v:'$24.8k',d:'+8%'},{l:'Repeat rate',v:'34%',d:'+3pt'}],
+    kpis:[{l:'Active members',v:'8,420',d:'+142'},{l:'Points issued',v:'1.2M',d:'this month'},{l:'Gift cards sold',v:'£24.8k',d:'+8%'},{l:'Repeat rate',v:'34%',d:'+3pt'}],
     cols:['Member','Tier','Points','Stays','Last visit'],
     rows:[['A. Dubois','Noir','18,420','12','Aug 2026'],['M. Tanaka','Aureate','6,204','5','Sep 2026'],['S. Okonkwo','Noir','22,108','18','Jul 2026'],['R. Meier','Aureate','3,840','3','Oct 2026'],['L. Costa','Signature','1,120','1','today']],
     connects:['Guest Intelligence','Payments','Reports','Website'],
@@ -656,9 +715,9 @@ const MODULES = {
     scope:'Lost-property log with photos, guest matching, return shipping, guest & hotel laundry tracking, linen par levels.'},
   financials:{no:27,phase:'Phase 3 · Control',ic:'dollar',title:'Financials',
     purpose:'P&L, budgets, bills, bank matching, debtors and accounting sync.',
-    kpis:[{l:'Revenue (MTD)',v:'$1.84M',d:'+7%'},{l:'GOP',v:'$612k',d:'33.2%'},{l:'Bills unpaid',v:'$84k',d:'12 items'},{l:'Bank reconciled',v:'99%',d:'clean'}],
+    kpis:[{l:'Revenue (MTD)',v:'£1.84M',d:'+7%'},{l:'GOP',v:'£612k',d:'33.2%'},{l:'Bills unpaid',v:'£84k',d:'12 items'},{l:'Bank reconciled',v:'99%',d:'clean'}],
     cols:['Account','Budget','Actual','Variance','Note'],
-    rows:[['Rooms','$1,120k','$1,204k','+$84k','strong ADR'],['F&B','$410k','$388k','-$22k','low cover'],['Spa','$96k','$112k','+$16k','high attach'],['Payroll','$520k','$504k','+$16k','agency'],['Other','$120k','$136k','+$16k','retail']],
+    rows:[['Rooms','£1,120k','£1,204k','+£84k','strong ADR'],['F&B','£410k','£388k','-£22k','low cover'],['Spa','£96k','£112k','+£16k','high attach'],['Payroll','£520k','£504k','+£16k','agency'],['Other','£120k','£136k','+£16k','retail']],
     connects:['Payments','Reports','Stock & Purchasing','Settings'],
     scope:'P&L, balance sheet, budgets, AP/AR, bank matching, VAT/levy, accounting export (Xero/QBO/Sage), audit trail.'},
   stock:{no:29,phase:'Phase 3 · Control',ic:'package',title:'Stock & Purchasing',
@@ -670,9 +729,9 @@ const MODULES = {
     scope:'Multi-warehouse stock, par levels, auto-reorder POs, GRN, recipe costing, stocktake, supplier catalogue.'},
   owner:{no:30,phase:'Phase 3 · Control',ic:'building',title:'Owner Dashboard & Manager App',
     purpose:'All hotels on one screen for owners; live operations for managers on a phone.',
-    kpis:[{l:'Properties',v:'4',d:'group'},{l:'Group RevPAR',v:'$284',d:'+6%'},{l:'Occupancy',v:'81%',d:'+2pt'},{l:'NPS',v:'72',d:'+4'}],
+    kpis:[{l:'Properties',v:'4',d:'group'},{l:'Group RevPAR',v:'£284',d:'+6%'},{l:'Occupancy',v:'81%',d:'+2pt'},{l:'NPS',v:'72',d:'+4'}],
     cols:['Property','Occ','ADR','RevPAR','GOP%'],
-    rows:[['Aurelia Royal Sands','84%','$412','$346','33.2%'],['Aurelia City House','76%','$228','$173','28.4%'],['Aurelia Lakeside','88%','$304','$268','31.8%'],['Aurelia Highlands','72%','$186','$134','26.1%']],
+    rows:[['Aurelia Royal Sands','84%','£412','£346','33.2%'],['Aurelia City House','76%','£228','£173','28.4%'],['Aurelia Lakeside','88%','£304','£268','31.8%'],['Aurelia Highlands','72%','£186','£134','26.1%']],
     connects:['Reports','Financials','Automations','Messages'],
     scope:'Group-level dashboard, multi-property roll-up, owner report pack, manager mobile app with approvals & alerts.'},
   api:{no:31,phase:'Phase 3 · Control',ic:'code',title:'Open API & Partner Integrations',
@@ -691,35 +750,35 @@ const MODULES = {
     scope:'Device registry, sensor telemetry, leak/energy/air-quality alerts, room automation, demand-response, compliance logs.'},
   mealplans:{no:33,phase:'Resort pack',ic:'utensils',title:'Meal Plans & All-Inclusive',
     purpose:'Board types (BB/HB/FB/AI) with entitlement checks at every outlet.',
-    kpis:[{l:'AI guests',v:'184',d:'62% of stays'},{l:'Redemptions',v:'412',d:'today'},{l:'F&B revenue',v:'$24.8k',d:'+4%'},{l:'Entitlement overrides',v:'6',d:'approved'}],
+    kpis:[{l:'AI guests',v:'184',d:'62% of stays'},{l:'Redemptions',v:'412',d:'today'},{l:'F&B revenue',v:'£24.8k',d:'+4%'},{l:'Entitlement overrides',v:'6',d:'approved'}],
     cols:['Guest','Plan','Outlet','Entitled','Used'],
     rows:[['A. Dubois','AI','all','unlimited','12'],['M. Tanaka','FB','dining','3 meals','2'],['S. Okonkwo','HB','dining','breakfast+1','1'],['R. Meier','BB','dining','breakfast','1'],['L. Costa','AI','all','unlimited','8']],
     connects:['Restaurant POS','In-Room Ordering','Front Desk','Financials'],
     scope:'Board plans, entitlement engine, AI consumption tracking, outlet checks, premium plan upsell, F&B cost allocation.'},
   wristbands:{no:34,phase:'Resort pack',ic:'key',title:'Cashless Wristbands',
     purpose:'Tap to pay, open doors and prove entitlement around the resort.',
-    kpis:[{l:'Bands active',v:'412',d:'this stay'},{l:'Tap payments',v:'$8.4k',d:'today'},{l:'Door taps',v:'2,840',d:'today'},{l:'Lost bands',v:'2',d:'blocked'}],
+    kpis:[{l:'Bands active',v:'412',d:'this stay'},{l:'Tap payments',v:'£8.4k',d:'today'},{l:'Door taps',v:'2,840',d:'today'},{l:'Lost bands',v:'2',d:'blocked'}],
     cols:['Band','Guest','Balance','Taps','Status'],
-    rows:[['WB-1042','A. Dubois','$184','14','active'],['WB-1045','M. Tanaka','$62','8','active'],['WB-1048','S. Okonkwo','$320','22','active'],['WB-1051','R. Meier','$0','3','active'],['WB-1038','L. Costa','—','0','blocked']],
+    rows:[['WB-1042','A. Dubois','£184','14','active'],['WB-1045','M. Tanaka','£62','8','active'],['WB-1048','S. Okonkwo','£320','22','active'],['WB-1051','R. Meier','£0','3','active'],['WB-1038','L. Costa','—','0','blocked']],
     connects:['Payments','Smart Room Keys','Meal Plans','Front Desk'],
     scope:'RFID band issuance, stored value, door access, entitlement taps, top-up, lost-band blocking, parental limits.'},
   outlets:{no:35,phase:'Resort pack',ic:'shoppingBag',title:'Multiple Outlets & Retail',
     purpose:'Many bars, restaurants and shops on one account with unified settlement.',
-    kpis:[{l:'Outlets',v:'8',d:'live'},{l:'Today\'s sales',v:'$48.9k',d:'+6%'},{l:'Avg check',v:'$64',d:'+$3'},{l:'Retail attach',v:'18%',d:'+2pt'}],
+    kpis:[{l:'Outlets',v:'8',d:'live'},{l:'Today\'s sales',v:'£48.9k',d:'+6%'},{l:'Avg check',v:'£64',d:'+£3'},{l:'Retail attach',v:'18%',d:'+2pt'}],
     cols:['Outlet','Type','Covers','Sales','Margin'],
-    rows:[['Azure','fine dining','84','$18.4k','68%'],['Sand Bar','bar','142','$8.2k','74%'],['Market','buffet','210','$11.8k','52%'],['Boutique','retail','—','$4.6k','62%'],['Dive shop','activity','38','$5.9k','58%']],
+    rows:[['Azure','fine dining','84','£18.4k','68%'],['Sand Bar','bar','142','£8.2k','74%'],['Market','buffet','210','£11.8k','52%'],['Boutique','retail','—','£4.6k','62%'],['Dive shop','activity','38','£5.9k','58%']],
     connects:['Restaurant POS','Kitchen Display','Stock','Financials'],
     scope:'Multi-outlet POS, unified menu & pricing, outlet P&L, inventory transfer, retail barcode, tax rules per outlet.'},
   amenities:{no:36,phase:'Resort pack',ic:'sun',title:'Amenities, Activities & Kids Club',
     purpose:'Sunbeds, cabanas, courts, activities and kids club with booking and capacity.',
-    kpis:[{l:'Bookings today',v:'64',d:'+6'},{l:'Cabana util',v:'88%',d:'+3pt'},{l:'Kids club',v:'24',d:'checked in'},{l:'Activity revenue',v:'$6.8k',d:'+9%'}],
+    kpis:[{l:'Bookings today',v:'64',d:'+6'},{l:'Cabana util',v:'88%',d:'+3pt'},{l:'Kids club',v:'24',d:'checked in'},{l:'Activity revenue',v:'£6.8k',d:'+9%'}],
     cols:['Resource','Bookings','Capacity','Status','Revenue'],
-    rows:[['Pool cabanas','16/18','18','high','$4.2k'],['Tennis courts','4/4','4','full','$480'],['Kids club','24/30','30','ok','$1.2k'],['Sunbeds','142/200','200','ok','—'],['Dive trips','3','12/d','ok','$960']],
+    rows:[['Pool cabanas','16/18','18','high','£4.2k'],['Tennis courts','4/4','4','full','£480'],['Kids club','24/30','30','ok','£1.2k'],['Sunbeds','142/200','200','ok','—'],['Dive trips','3','12/d','ok','£960']],
     connects:['Front Desk','Payments','Reports','Meal Plans'],
     scope:'Resource booking with capacity, cabana/daybed rental, activity scheduling, kids-club check-in/out, waivers.'},
   touroperators:{no:37,phase:'Resort pack',ic:'globe',title:'Tour Operator Contracts',
     purpose:'Room allocations and contracted rates for the travel trade with release dates.',
-    kpis:[{l:'Contracts',v:'12',d:'active'},{l:'Allocated rooms',v:'184',d:'+12'},{l:'Pick-up',v:'72%',d:'+4pt'},{l:'TO revenue',v:'$184k',d:'+7%'}],
+    kpis:[{l:'Contracts',v:'12',d:'active'},{l:'Allocated rooms',v:'184',d:'+12'},{l:'Pick-up',v:'72%',d:'+4pt'},{l:'TO revenue',v:'£184k',d:'+7%'}],
     cols:['Operator','Allocation','Picked up','Rate','Release'],
     rows:[['TUI','60','48','contract','14d'],['Jet2','40','32','contract','21d'],['Thomas Cook','30','18','net','10d'],['Kuoni','24','22','commission','7d'],['Local TO','30','12','net','14d']],
     connects:['Group & Events','Rates','OTA','Front Desk'],
@@ -787,16 +846,20 @@ function mvpView(key){
 /* Wire every MVP module into view metadata */
 Object.keys(MODULES).forEach(k=>{ VIEW_META[k] = [MODULES[k].title, MODULES[k].purpose]; });
 
+/* Collapsed sidebar groups — toggled by clicking the group label */
+const SB_COLLAPSED = new Set();
+
 const NAV = [
   {label:'Operations',items:[
     {v:'overview',ic:'dashboard',l:'Command Center'},
     {v:'reservations',ic:'calendar',l:'Reservation Graph'},
     {v:'frontdesk',ic:'userCheck',l:'Front Desk'},
     {v:'housekeeping',ic:'brush',l:'Housekeeping'},
-    {v:'facilities',ic:'mapPin',l:'Facility Mgmt',dot:true},
+    {v:'facilities',ic:'mapPin',l:'Facility Management',dot:true},
     {v:'command',ic:'building',l:'Command Tower',dot:true},
     {v:'maintenance',ic:'wrench',l:'Maintenance'},
     {v:'kiosks',ic:'monitor',l:'Kiosks & Keys'},
+    {v:'airport',ic:'plane',l:'Transfers',dot:true},
     {v:'hospitalitytv',ic:'monitor',l:'Hospitality TV',dot:true},
     {v:'nightaudit',ic:'moon',l:'Night Audit'},
   ]},
@@ -856,17 +919,24 @@ function renderSidebar(){
       <span><span class="brand-name">Bird<b>OS</b></span><div class="brand-sub">Hospitality OS</div></span>
     </div>
     <nav class="sb-nav">
-      ${NAV.map(g=>`
-        <div class="nav-group">
-          <div class="nav-group-label">${g.label}</div>
-          ${g.items.map(it=>`
-            <a class="nav-item ${S.view===it.v?'on':''}" data-view="${it.v}">
-              <span class="nav-ic">${icon(it.ic)}</span>
-              <span class="nav-label">${it.l}</span>
-              ${it.badge?`<span class="nav-badge">${it.badge}</span>`:''}
-              ${it.dot?'<span class="nav-dot"></span>':''}
-            </a>`).join('')}
-        </div>`).join('')}
+      ${NAV.map(g=>{
+        const collapsed=SB_COLLAPSED.has(g.label);
+        return `
+        <div class="nav-group ${collapsed?'collapsed':''}" data-group="${g.label}">
+          <div class="nav-group-label" data-toggle-group="${g.label}">
+            <span>${g.label}</span>
+            <span class="nav-group-caret">${icon('chevronDown')}</span>
+          </div>
+          <div class="nav-group-items">
+            ${g.items.map(it=>`
+              <a class="nav-item ${S.view===it.v?'on':''}" data-view="${it.v}">
+                <span class="nav-ic">${icon(it.ic)}</span>
+                <span class="nav-label">${it.l}</span>
+                ${it.badge?`<span class="nav-badge">${it.badge}</span>`:''}
+                ${it.dot?'<span class="nav-dot"></span>':''}
+              </a>`).join('')}
+          </div>
+        </div>`;}).join('')}
     </nav>
     <div class="sidebar-foot">
       <div class="ai-mini" data-action="open-ai">
@@ -948,6 +1018,7 @@ function go(v){
   if(v!=='facilities')FAC3D.destroy();
   if(v!=='command')CT3D.destroy();
   if(v!=='novotel')NOV3D.destroy();
+  if(v!=='airport'&&window.__airIv){clearInterval(window.__airIv);window.__airIv=null;}
   S.view=v;
   $$('.nav-item').forEach(a=>a.classList.toggle('on',a.dataset.view===v));
   renderTopbar();
@@ -974,19 +1045,6 @@ Object.keys(MODULES).forEach(k=>{
 VIEWS.overview = () => {
   const d=new Date(),h=d.getHours();
   const greet=h<12?'Good morning':h<18?'Good afternoon':'Bonsoir';
-  const kpi=(ic,label,val,cur,suf,dec,delta,note,sparkV,icColor)=>`
-    <div class="card kpi-card hover">
-      <div class="kpi-top">
-        <span class="kpi-ic" style="color:var(--${icColor});background:var(--${icColor}-soft)">${icon(ic)}</span>
-        <span class="kpi-label">${label}</span>
-      </div>
-      <div class="kpi-value"><span class="cur">${cur}</span><span data-count="${val}" data-decimals="${dec}" data-suffix="${suf}">0</span></div>
-      <div class="kpi-foot">
-        <span class="delta up">${icon('arrowUp')}${delta}</span>
-        <span class="spark">${spark(sparkV)}</span>
-      </div>
-      <div class="kpi-note" style="margin-top:6px">${note}</div>
-    </div>`;
   return `
   <div class="hero rise" ${''/* tilt */}>
     <div class="hero-bg"><img src="${IMG.exterior}" alt="Aurelia Royal Sands" loading="lazy"/></div>
@@ -1004,20 +1062,16 @@ VIEWS.overview = () => {
       <div class="hero-side">
         <div class="h-stat"><span class="hs-ic">${icon('sun')}</span><div><b>${PROPERTY.weather}</b><small>Sunset ${PROPERTY.sunset} · ideal arrival window</small></div></div>
         <div class="h-stat"><span class="hs-ic">${icon('key')}</span><div><b>196 digital keys</b><small>issued today · 42 awaiting arrival</small></div></div>
-        <div class="h-stat"><span class="hs-ic">${icon('trend')}</span><div><b>RevPAR $1,295</b><small>+9.4% vs comparable day last year</small></div></div>
+        <div class="h-stat"><span class="hs-ic">${icon('trend')}</span><div><b>RevPAR £1,295</b><small>+9.4% vs comparable day last year</small></div></div>
       </div>
-    </div>
-    <div class="float-card">
-      <span class="fc-ic">${icon('checkCircle')}</span>
-      <div><b>Kiosk 1 · contactless check-in</b><small>Isabella Moreau · Villa 501 · just now</small></div>
     </div>
   </div>
 
   <div class="row" style="margin-top:18px">
     <div class="c-3 rise rise-1">${kpi('bed','Occupancy tonight',87.4,'','%',1,'3.2 pts','299 of 342 keys · +3.2 pts vs forecast',SPARKS.occ,'emerald')}</div>
-    <div class="c-3 rise rise-2">${kpi('dollar','ADR',1482,'$','',0,'6.8%','Average daily rate · last 30 days',SPARKS.adr,'gold')}</div>
-    <div class="c-3 rise rise-3">${kpi('trend','RevPAR',1295,'$','',0,'9.4%','Revenue per available room',SPARKS.rev,'azure')}</div>
-    <div class="c-3 rise rise-4">${kpi('chart','Revenue today',218460,'$','',0,'12.1%','Rooms · F&B · spa · experiences',SPARKS.rev,'crimson')}</div>
+    <div class="c-3 rise rise-2">${kpi('dollar','ADR',1482,'£','',0,'6.8%','Average daily rate · last 30 days',SPARKS.adr,'gold')}</div>
+    <div class="c-3 rise rise-3">${kpi('trend','RevPAR',1295,'£','',0,'9.4%','Revenue per available room',SPARKS.rev,'azure')}</div>
+    <div class="c-3 rise rise-4">${kpi('chart','Revenue today',218460,'£','',0,'12.1%','Rooms · F&B · spa · experiences',SPARKS.rev,'crimson')}</div>
   </div>
 
   <div class="row">
@@ -1127,7 +1181,7 @@ VIEWS.overview = () => {
         <div class="card-body" style="display:flex;flex-direction:column;gap:10px">
           <div class="ai-rec">
             <span class="air-ic">${icon('key')}</span>
-            <div style="flex:1"><b style="font-size:13px">$12,400 upgrade opportunity · 14 arrivals</b>
+            <div style="flex:1"><b style="font-size:13px">£12,400 upgrade opportunity · 14 arrivals</b>
               <p style="font-size:11.8px;color:var(--mut);margin-top:3px">Eligible guests show pool-pavilion intent; Aves drafted personalised offers in their language.</p></div>
             <div style="display:flex;flex-direction:column;gap:6px"><button class="btn-gold btn-sm" data-action="toast" data-t="Offers dispatched" data-s="14 guests · WhatsApp + email">Send all</button>
             <button class="btn-ghost btn-sm" data-action="toast" data-t="Reviewing offers" data-s="Opening targeting details">Review</button></div>
@@ -1135,7 +1189,7 @@ VIEWS.overview = () => {
           <div class="ai-rec">
             <span class="air-ic">${icon('trend')}</span>
             <div style="flex:1"><b style="font-size:13px">18 Oct is underselling by 8%</b>
-              <p style="font-size:11.8px;color:var(--mut);margin-top:3px">Comp set BAR $2,360 vs ours $1,980. Demand index 94 with the Regatta weekend arriving.</p></div>
+              <p style="font-size:11.8px;color:var(--mut);margin-top:3px">Comp set BAR £2,360 vs ours £1,980. Demand index 94 with the Regatta weekend arriving.</p></div>
             <div style="display:flex;flex-direction:column;gap:6px"><button class="btn-gold btn-sm" data-view="revenue">Approve +8%</button>
             <button class="btn-ghost btn-sm" data-view="revenue">Model</button></div>
           </div>
@@ -1263,7 +1317,7 @@ function reservationPanelDefault(){
           <b class="num" style="font-size:20px;display:block;margin-top:3px;font-family:var(--font-d)">28</b></div>
       </div>
       <div class="dp-kv"><span>Pace vs last year</span><b style="color:var(--emerald)">+11.8%</b></div>
-      <div class="dp-kv"><span>Pipeline value · 14d</span><b>$814,200</b></div>
+      <div class="dp-kv"><span>Pipeline value · 14d</span><b>£814,200</b></div>
       <div class="dp-kv"><span>Cancellations · 14d</span><b>6 · 2.1%</b></div>
       <div class="dp-kv"><span>Waitlisted suites</span><b style="color:var(--amber)">9 requests</b></div>
       <div class="divider"></div>
@@ -1281,7 +1335,7 @@ function reservationPanel(ri,bi){
     return `<div class="card-h"><div><div class="card-title">Room ${r.no} · ${r.type}</div><div class="card-sub">Out of order</div></div><span class="tag tag-red">OOO</span></div>
     <div class="card-body"><div class="dp-kv"><span>Reason</span><b>${b.name}</b></div>
     <div class="dp-kv"><span>Window</span><b>${b.len} nights</b></div>
-    <div class="dp-kv"><span>Revenue impact</span><b style="color:var(--crimson)">$0</b></div>
+    <div class="dp-kv"><span>Revenue impact</span><b style="color:var(--crimson)">£0</b></div>
     <button class="btn-ghost" style="width:100%;justify-content:center;margin-top:14px" data-action="toast" data-t="Engineering notified" data-s="Re-inspection scheduled">Request re-inspection</button></div>`;
   }
   const inDate=addDays(new Date(),Math.max(b.start,0));
@@ -1298,7 +1352,7 @@ function reservationPanel(ri,bi){
       <div class="dp-kv"><span>Nights · Guests</span><b>${b.len} · 2</b></div>
       <div class="dp-kv"><span>Nightly rate</span><b>${money(b.rate)}</b></div>
       <div class="dp-kv"><span>Folio total</span><b>${money(b.rate*b.len)}</b></div>
-      <div class="dp-kv"><span>Balance due</span><b style="color:var(--${b.kind==='stay'?'amber':'emerald'})">${b.kind==='stay'?money(Math.round(b.rate*b.len*.3)):'$0'}</b></div>
+      <div class="dp-kv"><span>Balance due</span><b style="color:var(--${b.kind==='stay'?'amber':'emerald'})">${b.kind==='stay'?money(Math.round(b.rate*b.len*.3)):'£0'}</b></div>
       <div class="divider"></div>
       <div class="dp-timeline">
         ${[['Reservation confirmed',true],['Deposit secured · tokenized card',true],[b.kind==='arr'||b.kind==='stay'||b.kind==='due'?'Guest arrived':'Arrival — key issued at kiosk',b.kind!=='conf'],['Departure & folio settlement',false]].map((s,i)=>`
@@ -1538,6 +1592,200 @@ VIEWS.kiosks = () => {
   </div>`;
 };
 INIT.kiosks=()=>{};
+
+/* ============================================================
+   VIEW · AIRPORT PICKUP & DRIVER ASSIGNMENT
+   ============================================================ */
+const FLIGHT_STATUS = {
+  'landed':   {c:'green', col:'emerald', l:'Landed'},
+  'on-time':  {c:'blue',  col:'azure',   l:'On time'},
+  'delayed':  {c:'red',   col:'crimson', l:'Delayed'},
+  'landing':  {c:'gold',  col:'gold',    l:'Landing now'},
+};
+const DRIVER_STATUS = {
+  'available':{c:'green', l:'Available'},
+  'on-trip':  {c:'blue',    l:'On trip'},
+  'break':    {c:'amber',   l:'On break'},
+};
+const PICKUP_STATUS = {
+  'queued':    {c:'amber',   l:'Queued'},
+  'assigned':  {c:'blue',    l:'Assigned'},
+  'in-transit':{c:'gold',    l:'In transit'},
+  'completed': {c:'green', l:'Completed'},
+};
+let AIR_TAB = 'arrivals'; /* 'arrivals' = pickups, 'departures' = drop-offs */
+
+VIEWS.airport = () => {
+  const ap = activeProperty().airport;
+  const onTime = FLIGHTS.filter(f=>f.status==='on-time'||f.status==='landed'||f.status==='landing').length;
+  const onTimePct = Math.round(onTime/FLIGHTS.length*100);
+  const paxInbound = FLIGHTS.reduce((a,f)=>a+f.pax,0);
+  const driversOnDuty = DRIVERS.filter(d=>d.st!=='break').length;
+  const pickupsQueued = PICKUPS.filter(p=>p.st==='queued').length;
+  const dropoffsQueued = DROPOFFS.filter(d=>d.st==='queued').length;
+
+  const transferItems = AIR_TAB==='arrivals' ? PICKUPS : DROPOFFS;
+  const transferQueued = AIR_TAB==='arrivals' ? pickupsQueued : dropoffsQueued;
+  const transferInMotion = transferItems.filter(t=>t.st==='assigned'||t.st==='in-transit').length;
+  const transferLabel = AIR_TAB==='arrivals' ? 'Pickups' : 'Drop-offs';
+  const timeLabel = AIR_TAB==='arrivals' ? 'ETA' : 'Pickup';
+
+  return `
+  <div class="airport-hero" style="background:linear-gradient(135deg,var(--gold-grad-soft),transparent);border-radius:18px;padding:22px 24px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px">
+    <div style="display:flex;align-items:center;gap:16px">
+      <span style="width:54px;height:54px;border-radius:15px;display:grid;place-items:center;background:var(--gold-grad);color:#fff">${icon('plane')}</span>
+      <div>
+        <div style="font-size:20px;font-weight:700">Transfers · ${ap.name}</div>
+        <div style="font-size:12.5px;color:var(--mut)">${ap.city} · IATA <b>${ap.iata}</b> · flight arrivals · pickups & drop-offs · live data</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:28px;align-items:center">
+      <div style="text-align:right"><div style="font-size:22px;font-weight:700;font-family:var(--font-d)" id="air-clock">--:--:--</div><div style="font-size:11px;color:var(--mut)">local time · ${ap.tz}</div></div>
+      <div style="text-align:right"><div style="font-size:22px;font-weight:700;font-family:var(--font-d)">${FLIGHTS.length}</div><div style="font-size:11px;color:var(--mut)">arrivals today</div></div>
+    </div>
+  </div>
+
+  <div class="row" style="margin-bottom:18px">
+    <div class="c-3">${kpi('plane','Arrivals today',FLIGHTS.length,'','',0,'','flights across all terminals',SPARKS.occ,'gold')}</div>
+    <div class="c-3">${kpi('checkCircle','On-time performance',onTimePct,'','%',0,'','flights on-time / landed / landing',SPARKS.adr,'emerald')}</div>
+    <div class="c-3">${kpi('car','Drivers on duty',driversOnDuty,'','',0,'','of '+DRIVERS.length+' in fleet',SPARKS.rev,'blue')}</div>
+    <div class="c-3">${kpi('users','Guests inbound',paxInbound,'','',0,'','passengers across arrivals',SPARKS.gop,'crimson')}</div>
+  </div>
+
+  <div class="row">
+    <div class="c-8">
+      <div class="card" style="height:100%">
+        <div class="card-h">
+          <div><div class="card-title">Live arrivals board</div><div class="card-sub">${ap.name} · real-time airline status · guests on each flight</div></div>
+          <div class="card-actions"><span class="pulse-dot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--emerald);margin-right:6px"></span><span style="font-size:12px;color:var(--mut)">LIVE</span></div>
+        </div>
+        <div class="card-body" style="padding:0;overflow:auto">
+          <table class="dt" style="width:100%;border-collapse:collapse">
+            <thead><tr style="position:sticky;top:0;background:var(--panel)">
+              <th style="text-align:left;padding:10px 14px;font-size:11px;color:var(--mut)">Flight</th>
+              <th style="text-align:left;padding:10px 14px;font-size:11px;color:var(--mut)">From</th>
+              <th style="text-align:left;padding:10px 14px;font-size:11px;color:var(--mut)">Sched</th>
+              <th style="text-align:left;padding:10px 14px;font-size:11px;color:var(--mut)">Est</th>
+              <th style="text-align:left;padding:10px 14px;font-size:11px;color:var(--mut)">Terminal</th>
+              <th style="text-align:left;padding:10px 14px;font-size:11px;color:var(--mut)">Guests</th>
+              <th style="text-align:left;padding:10px 14px;font-size:11px;color:var(--mut)">Status</th>
+            </tr></thead>
+            <tbody>
+              ${FLIGHTS.map(f=>{const s=FLIGHT_STATUS[f.status];return `
+                <tr style="border-top:1px solid var(--line)">
+                  <td style="padding:10px 14px"><b style="font-family:var(--font-d)">${f.f}</b><div style="font-size:10.5px;color:var(--mut)">${f.air}</div></td>
+                  <td style="padding:10px 14px;font-size:12px">${f.orig}</td>
+                  <td style="padding:10px 14px;font-family:var(--font-d);font-size:13px">${f.sched}</td>
+                  <td style="padding:10px 14px;font-family:var(--font-d);font-size:13px;color:var(--${s.col})"><b>${f.est}</b></td>
+                  <td style="padding:10px 14px;font-size:12px">${f.term} · ${f.gate}<div style="font-size:10.5px;color:var(--mut)">${f.belt} · ${f.pax} pax</div></td>
+                  <td style="padding:10px 14px;font-size:11.5px">${f.guests.map(g=>`<span style="display:inline-block;background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:1px 7px;margin:1px 2px 1px 0;white-space:nowrap">${g}</span>`).join('')}</td>
+                  <td style="padding:10px 14px"><span class="tag tag-${s.c}">${s.l}</span></td>
+                </tr>`;}).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="c-4">
+      <div class="card" style="height:100%">
+        <div class="card-h">
+          <div><div class="card-title">Transfer queue</div><div class="card-sub">${transferQueued} awaiting ${AIR_TAB==='arrivals'?'pickup':'drop-off'} · ${transferInMotion} in motion</div></div>
+        </div>
+        <div class="seg" style="margin:0 14px 12px">
+          <button class="${AIR_TAB==='arrivals'?'on':''}" data-air-tab="arrivals">${icon('plane')} Arrivals</button>
+          <button class="${AIR_TAB==='departures'?'on':''}" data-air-tab="departures">${icon('send')} Departures</button>
+        </div>
+        <div class="card-body" style="padding-top:0;display:flex;flex-direction:column;gap:10px">
+          ${transferItems.map(t=>{
+            const s=PICKUP_STATUS[t.st];
+            const drv=t.driver?DRIVERS.find(d=>d.id===t.driver):null;
+            const availDrivers=DRIVERS.filter(d=>d.st==='available');
+            return `
+            <div style="border:1px solid var(--line);border-radius:12px;padding:12px 14px">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+                <div><b style="font-size:13px">${t.guest}</b><div style="font-size:11px;color:var(--mut)">${t.room} · ${t.pax} pax · ${t.bag} bags</div></div>
+                <span class="tag tag-${s.c}">${s.l}</span>
+              </div>
+              <div style="font-size:11.5px;color:var(--mut);margin-bottom:8px">${icon(AIR_TAB==='arrivals'?'plane':'send')} <b style="color:var(--fg)">${t.flight}</b> · ${timeLabel} <b>${AIR_TAB==='arrivals'?t.eta:t.dep}</b></div>
+              ${t.st==='queued'?`
+                <div style="display:flex;gap:6px">
+                  <select class="input" data-transfer="${t.id}" style="flex:1;font-size:12px;padding:7px 10px;border-radius:9px;border:1px solid var(--line);background:var(--panel);color:var(--fg)">
+                    <option value="">Assign driver…</option>
+                    ${availDrivers.map(d=>`<option value="${d.id}">${d.n} · ${d.veh.split('·')[0].trim()}</option>`).join('')}
+                  </select>
+                  <button class="btn-gold btn-sm" data-assign="${t.id}" data-kind="${AIR_TAB}">${icon('check')}</button>
+                </div>`:`
+                <div style="font-size:12px;display:flex;align-items:center;gap:6px">
+                  <span class="hs-ic" style="width:24px;height:24px">${icon('car')}</span>
+                  <span>${drv?drv.n:'—'} <small style="color:var(--mut)">· ${drv?drv.veh.split('·')[1].trim():''}</small></span>
+                </div>`}
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row" style="margin-top:18px">
+    <div class="c-12">
+      <div class="card">
+        <div class="card-h">
+          <div><div class="card-title">Driver fleet</div><div class="card-sub">${DRIVERS.length} drivers · assign to queued ${transferLabel.toLowerCase()}</div></div>
+        </div>
+        <div class="card-body">
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
+            ${DRIVERS.map(d=>{const s=DRIVER_STATUS[d.st];return `
+              <div class="card hover" style="padding:14px;margin:0">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+                  <span style="width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:var(--gold-grad-soft);color:var(--gold-deep)">${icon('car')}</span>
+                  <div style="flex:1"><b style="font-size:13px">${d.n}</b><div style="font-size:11px;color:var(--mut)">${d.veh}</div></div>
+                  <span class="tag tag-${s.c}">${s.l}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--mut)">
+                  <span>${icon('mapPin')} ${d.zone}</span>
+                  <span>${d.trips} trips today</span>
+                  <span style="color:var(--gold)">★ ${d.rating}</span>
+                </div>
+              </div>`;}).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+};
+
+INIT.airport = () => {
+  // Live clock
+  const tick=()=>{const el=$('#air-clock');if(el){const d=new Date();el.textContent=d.toLocaleTimeString('en-GB',{hour12:false,timeZone:activeProperty().airport.tz});}};
+  tick(); const iv=setInterval(tick,1000);
+  window.__airIv=iv;
+
+  // Transfer queue tab switch (Arrivals = pickups · Departures = drop-offs)
+  $$('[data-air-tab]').forEach(b=>b.addEventListener('click',()=>{
+    AIR_TAB = b.dataset.airTab;
+    go('airport');
+  }));
+
+  // Assign driver to a queued transfer (pickup or drop-off, keyed by data-kind)
+  $$('[data-assign]').forEach(b=>b.addEventListener('click',()=>{
+    const tid=b.dataset.assign;
+    const kind=b.dataset.kind;
+    const sel=$(`select[data-transfer="${tid}"]`);
+    if(!sel||!sel.value){toast('Select a driver','Choose an available driver first','alert');return;}
+    const list = kind==='departures' ? DROPOFFS : PICKUPS;
+    const tx=list.find(t=>t.id===tid);
+    const driver=DRIVERS.find(d=>d.id===sel.value);
+    if(tx&&driver){
+      tx.driver=driver.id; tx.st='assigned';
+      if(kind==='departures') tx.eta=(10+Math.floor(Math.random()*15))+' min';
+      else tx.eta=(10+Math.floor(Math.random()*15))+' min';
+      driver.st='on-trip';
+      toast('Driver assigned',`${driver.n} → ${tx.guest} (${tx.flight})`,'success');
+      go('airport');
+    }
+  }));
+};
 
 /* ============================================================
    3D HOUSEKEEPING TOWER — cinematic live digital twin (Three.js)
@@ -3575,32 +3823,32 @@ const ROOM_TYPE_META={studio:['Studio','28 m² · queen'],deluxe:['Deluxe','42 m
 
 /* Inventory master data (shared by 3D asset inspector + Inventory view) */
 const INVENTORY=[
-  {cat:'Bedroom',item:'King bed',sku:'BD-KG-200',qty:42,cond:'Excellent',acq:'Mar 2024',val:'$2,400',note:'Solid oak frame, premium pocket-spring mattress.'},
-  {cat:'Bedroom',item:'Queen bed',sku:'BD-QN-160',qty:58,cond:'Excellent',acq:'Mar 2024',val:'$1,800',note:'Solid oak frame, premium pocket-spring mattress.'},
-  {cat:'Bedroom',item:'Nightstand + lamp',sku:'NS-LP-01',qty:180,cond:'Good',acq:'Mar 2024',val:'$420',note:'Walnut veneer, dimmable LED lamp.'},
-  {cat:'Bedroom',item:'Wardrobe',sku:'WR-WD-160',qty:100,cond:'Excellent',acq:'Feb 2024',val:'$1,650',val2:'',note:'2-door walnut with soft-close hinges.'},
-  {cat:'Living',item:'3-seat sofa',sku:'SF-3S-01',qty:64,cond:'Good',acq:'Feb 2024',val:'$3,200',note:'Performance bouclé fabric, solid wood legs.'},
-  {cat:'Living',item:'Leather armchair',sku:'AC-LT-01',qty:82,cond:'Excellent',acq:'Feb 2024',val:'$1,400',note:'Full-grain leather, swivel base.'},
-  {cat:'Living',item:'Coffee table',sku:'CT-WD-01',qty:100,cond:'Excellent',acq:'Feb 2024',val:'$680',note:'Walnut top, brushed brass legs.'},
-  {cat:'Living',item:'Work desk',sku:'DK-WD-130',qty:120,cond:'Good',acq:'Jan 2024',val:'$540',note:'Walnut top with metal trestle legs.'},
-  {cat:'Living',item:'Desk chair',sku:'CH-MT-01',qty:120,cond:'Good',acq:'Jan 2024',val:'$380',note:'Ergonomic mesh, gas-lift height.'},
-  {cat:'Living',item:'TV console',sku:'TVC-WD-200',qty:100,cond:'Excellent',acq:'Jan 2024',val:'$920',note:'Walnut, 2 soft-close drawers.'},
-  {cat:'Dining',item:'Dining table',sku:'DT-WD-4',qty:86,cond:'Excellent',acq:'Mar 2024',val:'$1,100',note:'Solid walnut, seats 4.'},
-  {cat:'Dining',item:'Dining chair',sku:'DC-FB-01',qty:344,cond:'Good',acq:'Mar 2024',val:'$220',note:'Upholstered, metal legs.'},
-  {cat:'Electronics',item:'Smart TV 55"',sku:'TV-SM-55',qty:200,cond:'Excellent',acq:'Apr 2024',val:'$680',note:'4K UHD, smart OS, hotel mode.'},
-  {cat:'Electronics',item:'Microwave',sku:'MW-28L',qty:100,cond:'Good',acq:'Apr 2024',val:'$180',note:'28L, inverter, hotel-safe.'},
-  {cat:'Kitchen',item:'Refrigerator',sku:'FR-SS-320',qty:100,cond:'Excellent',acq:'Mar 2024',val:'$980',note:'Stainless, 320L, frost-free.'},
-  {cat:'Kitchen',item:'Induction cooktop',sku:'ST-IN-4',qty:100,cond:'Excellent',acq:'Mar 2024',val:'$560',note:'4 zones, touch control.'},
-  {cat:'Kitchen',item:'Oven',sku:'OV-BL-60',qty:100,cond:'Excellent',acq:'Mar 2024',val:'$720',note:'Built-in, 60cm, pyrolytic.'},
-  {cat:'Kitchen',item:'Kitchenette counter',sku:'KT-CT-200',qty:100,cond:'Excellent',acq:'Feb 2024',val:'$1,850',note:'Stone top, walnut base, sink + tap.'},
-  {cat:'Bathroom',item:'Bathroom suite',sku:'BR-WH-01',qty:100,cond:'Excellent',acq:'Jan 2024',val:'$2,200',note:'Vanity, basin, toilet, glass shower.'},
-  {cat:'Bathroom',item:'Soaking bathtub',sku:'BT-ST-160',qty:24,cond:'Excellent',acq:'Jan 2024',val:'$1,600',note:'Stone resin, 160cm, suites only.'},
-  {cat:'Lighting',item:'Pendant light',sku:'LT-PD-01',qty:200,cond:'Good',acq:'Feb 2024',val:'$180',note:'Fabric shade, warm LED.'},
-  {cat:'Lighting',item:'Floor lamp',sku:'LT-FL-01',qty:100,cond:'Good',acq:'Feb 2024',val:'$260',note:'Brushed brass, dimmable.'},
-  {cat:'Decor',item:'Area rug',sku:'RG-WV-220',qty:120,cond:'Good',acq:'Mar 2024',val:'$480',note:'Hand-woven wool blend.'},
-  {cat:'Decor',item:'Potted plant',sku:'PL-GR-01',qty:200,cond:'Good',acq:'ongoing',val:'$90',note:'Live, horticulture rotation.'},
-  {cat:'Decor',item:'Framed artwork',sku:'ART-FR-01',qty:160,cond:'Excellent',acq:'Apr 2024',val:'$320',note:'Gold leaf frame, giclée print.'},
-  {cat:'Storage',item:'Mini bar',sku:'MB-GL-01',qty:100,cond:'Good',acq:'Mar 2024',val:'$540',note:'Glass door, silent compressor.'},
+  {cat:'Bedroom',item:'King bed',sku:'BD-KG-200',qty:42,cond:'Excellent',acq:'Mar 2024',val:'£2,400',note:'Solid oak frame, premium pocket-spring mattress.'},
+  {cat:'Bedroom',item:'Queen bed',sku:'BD-QN-160',qty:58,cond:'Excellent',acq:'Mar 2024',val:'£1,800',note:'Solid oak frame, premium pocket-spring mattress.'},
+  {cat:'Bedroom',item:'Nightstand + lamp',sku:'NS-LP-01',qty:180,cond:'Good',acq:'Mar 2024',val:'£420',note:'Walnut veneer, dimmable LED lamp.'},
+  {cat:'Bedroom',item:'Wardrobe',sku:'WR-WD-160',qty:100,cond:'Excellent',acq:'Feb 2024',val:'£1,650',val2:'',note:'2-door walnut with soft-close hinges.'},
+  {cat:'Living',item:'3-seat sofa',sku:'SF-3S-01',qty:64,cond:'Good',acq:'Feb 2024',val:'£3,200',note:'Performance bouclé fabric, solid wood legs.'},
+  {cat:'Living',item:'Leather armchair',sku:'AC-LT-01',qty:82,cond:'Excellent',acq:'Feb 2024',val:'£1,400',note:'Full-grain leather, swivel base.'},
+  {cat:'Living',item:'Coffee table',sku:'CT-WD-01',qty:100,cond:'Excellent',acq:'Feb 2024',val:'£680',note:'Walnut top, brushed brass legs.'},
+  {cat:'Living',item:'Work desk',sku:'DK-WD-130',qty:120,cond:'Good',acq:'Jan 2024',val:'£540',note:'Walnut top with metal trestle legs.'},
+  {cat:'Living',item:'Desk chair',sku:'CH-MT-01',qty:120,cond:'Good',acq:'Jan 2024',val:'£380',note:'Ergonomic mesh, gas-lift height.'},
+  {cat:'Living',item:'TV console',sku:'TVC-WD-200',qty:100,cond:'Excellent',acq:'Jan 2024',val:'£920',note:'Walnut, 2 soft-close drawers.'},
+  {cat:'Dining',item:'Dining table',sku:'DT-WD-4',qty:86,cond:'Excellent',acq:'Mar 2024',val:'£1,100',note:'Solid walnut, seats 4.'},
+  {cat:'Dining',item:'Dining chair',sku:'DC-FB-01',qty:344,cond:'Good',acq:'Mar 2024',val:'£220',note:'Upholstered, metal legs.'},
+  {cat:'Electronics',item:'Smart TV 55"',sku:'TV-SM-55',qty:200,cond:'Excellent',acq:'Apr 2024',val:'£680',note:'4K UHD, smart OS, hotel mode.'},
+  {cat:'Electronics',item:'Microwave',sku:'MW-28L',qty:100,cond:'Good',acq:'Apr 2024',val:'£180',note:'28L, inverter, hotel-safe.'},
+  {cat:'Kitchen',item:'Refrigerator',sku:'FR-SS-320',qty:100,cond:'Excellent',acq:'Mar 2024',val:'£980',note:'Stainless, 320L, frost-free.'},
+  {cat:'Kitchen',item:'Induction cooktop',sku:'ST-IN-4',qty:100,cond:'Excellent',acq:'Mar 2024',val:'£560',note:'4 zones, touch control.'},
+  {cat:'Kitchen',item:'Oven',sku:'OV-BL-60',qty:100,cond:'Excellent',acq:'Mar 2024',val:'£720',note:'Built-in, 60cm, pyrolytic.'},
+  {cat:'Kitchen',item:'Kitchenette counter',sku:'KT-CT-200',qty:100,cond:'Excellent',acq:'Feb 2024',val:'£1,850',note:'Stone top, walnut base, sink + tap.'},
+  {cat:'Bathroom',item:'Bathroom suite',sku:'BR-WH-01',qty:100,cond:'Excellent',acq:'Jan 2024',val:'£2,200',note:'Vanity, basin, toilet, glass shower.'},
+  {cat:'Bathroom',item:'Soaking bathtub',sku:'BT-ST-160',qty:24,cond:'Excellent',acq:'Jan 2024',val:'£1,600',note:'Stone resin, 160cm, suites only.'},
+  {cat:'Lighting',item:'Pendant light',sku:'LT-PD-01',qty:200,cond:'Good',acq:'Feb 2024',val:'£180',note:'Fabric shade, warm LED.'},
+  {cat:'Lighting',item:'Floor lamp',sku:'LT-FL-01',qty:100,cond:'Good',acq:'Feb 2024',val:'£260',note:'Brushed brass, dimmable.'},
+  {cat:'Decor',item:'Area rug',sku:'RG-WV-220',qty:120,cond:'Good',acq:'Mar 2024',val:'£480',note:'Hand-woven wool blend.'},
+  {cat:'Decor',item:'Potted plant',sku:'PL-GR-01',qty:200,cond:'Good',acq:'ongoing',val:'£90',note:'Live, horticulture rotation.'},
+  {cat:'Decor',item:'Framed artwork',sku:'ART-FR-01',qty:160,cond:'Excellent',acq:'Apr 2024',val:'£320',note:'Gold leaf frame, giclée print.'},
+  {cat:'Storage',item:'Mini bar',sku:'MB-GL-01',qty:100,cond:'Good',acq:'Mar 2024',val:'£540',note:'Glass door, silent compressor.'},
 ];
 
 
@@ -4918,14 +5166,14 @@ INIT.floorplan=()=>{
 const INV_CATS=['All','Bedroom','Living','Dining','Electronics','Kitchen','Bathroom','Lighting','Decor','Storage'];
 VIEWS.inventory = () => {
   const total=INVENTORY.reduce((a,i)=>a+i.qty,0);
-  const valTotal=INVENTORY.reduce((a,i)=>a+parseFloat(i.val.replace(/[$,]/g,'')),0);
+  const valTotal=INVENTORY.reduce((a,i)=>a+parseFloat(i.val.replace(/[£,]/g,'')),0);
   const cats={}; INVENTORY.forEach(i=>{ cats[i.cat]=(cats[i.cat]||0)+i.qty; });
   const roomsByFloor={}; ROOMS.forEach(r=>{const f=Math.floor(r.n/100);(roomsByFloor[f]=roomsByFloor[f]||[]).push(r);});
   const statusDot={clean:'#6FCF97',occupied:'#5B9BD5',dirty:'#F0A45A',maintenance:'#E06B6B'};
   return `
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px" class="rise">
     ${[['Total assets',total,'items','package','green'],['Categories',Object.keys(cats).length,'groups','layers','gold'],
-       ['Asset value','$'+(valTotal/1000).toFixed(1)+'k','book value','dollar','blue'],['Rooms',ROOMS.length,'inspected','building','green']].map(k=>`
+       ['Asset value','£'+(valTotal/1000).toFixed(1)+'k','book value','dollar','blue'],['Rooms',ROOMS.length,'inspected','building','green']].map(k=>`
       <div class="card kpi-card" style="padding:14px 16px">
         <div class="kpi-top"><span class="kpi-ic" style="color:var(--${k[4]});background:var(--${k[4]}-soft)">${icon(k[3])}</span>
           <span class="kpi-label">${k[0]}</span></div>
@@ -5048,9 +5296,9 @@ INIT.inventory=()=>{
 };
 
 /* ============================================================
-   VIEW · HOSPITALITY TV (fleet control · greetings · broadcast)
+   VIEW · HOSPITALITY TV (fleet · public · live guide · upsell · PPV · services)
    ============================================================ */
-const TV_MODELS=['Samsung 55" Hospitality','LG 43" Pro:Centric','Philips 50" MediaSuite'];
+const TV_MODELS=['Samsung 55" QLED','LG 43" Pro:Centric','Philips 50" MediaSuite'];
 const TVS=ROOMS.map((r,i)=>({
   room:r.n,guest:r.guest,type:r.type,
   st:r.status==='occupied'?'online':(i%6===4?'offline':'standby'),
@@ -5058,12 +5306,71 @@ const TVS=ROOMS.map((r,i)=>({
   vol:12+(i*7)%20,ch:1+(i*3)%48,
   input:['Live TV','Casting','HDMI 1'][i%3],
   greet:r.status==='occupied',
+  cast:r.status==='occupied'&&i%2===0,
+  alarm:i%3===0?['07:00','Tomorrow']:null,
 }));
 const TV_STATUS={online:['Online','#6FCF97','tag-green'],standby:['Standby','#F0A45A','tag-amber'],offline:['Offline','#E06B6B','tag-red']};
 const TV_GREET={
   tpl:`Welcome, {guest}\nWe're delighted to host you at {hotel}.\nYour suite {room} is ready — enjoy your stay.`,
   lang:'EN',dur:'until-dismissed',weather:true,checkout:true,
 };
+/* Public area TVs — lobby, pool, dining, wellness, meetings, recreation, elevators */
+const PUB_TVZ=[
+  {id:'lobby-1',loc:'Main Lobby',zone:'Lobby',model:'Samsung 75" 4K',st:'online',ch:1,vol:8,input:'Live TV',loop:'Ambient Resort Film'},
+  {id:'lobby-2',loc:'Lobby Lounge',zone:'Lobby',model:'LG 65" Pro:Centric',st:'online',ch:3,vol:6,input:'Live TV',loop:'Brand Channel'},
+  {id:'pool-1',loc:'Pool Bar',zone:'Pool',model:'Samsung 65" Outdoor',st:'online',ch:7,vol:10,input:'Live TV',loop:'—'},
+  {id:'rest-1',loc:'Azure Restaurant',zone:'Dining',model:'LG 55" Pro:Centric',st:'online',ch:5,vol:4,input:'Live TV',loop:'—'},
+  {id:'rest-2',loc:'Saffron Bar',zone:'Dining',model:'Samsung 50"',st:'online',ch:2,vol:5,input:'Live TV',loop:'—'},
+  {id:'gym-1',loc:'Fitness Center',zone:'Wellness',model:'Samsung 50"',st:'standby',ch:2,vol:0,input:'Live TV',loop:'—'},
+  {id:'spa-1',loc:'Spa Reception',zone:'Wellness',model:'LG 43"',st:'online',ch:1,vol:3,input:'Info Loop',loop:'Spa Menu & Pricing'},
+  {id:'board-1',loc:'Boardroom',zone:'Meetings',model:'Samsung 75"',st:'standby',ch:1,vol:0,input:'HDMI 1',loop:'—'},
+  {id:'kids-1',loc:'Kids Club',zone:'Recreation',model:'LG 43"',st:'online',ch:4,vol:6,input:'Live TV',loop:'—'},
+  {id:'elev-1',loc:'Elevator Bank A',zone:'Lobby',model:'Samsung 32" Vertical',st:'online',ch:1,vol:0,input:'Info Loop',loop:'Wayfinding + Promos'},
+  {id:'elev-2',loc:'Elevator Bank B',zone:'Lobby',model:'Samsung 32" Vertical',st:'online',ch:1,vol:0,input:'Info Loop',loop:'Wayfinding + Promos'},
+];
+const PUB_ZONE_COLORS={Lobby:'gold',Dining:'red',Pool:'blue',Wellness:'green',Meetings:'amber',Recreation:'blue'};
+/* Live TV channel guide — real-time program simulation */
+const TV_CHANNELS=[
+  {n:1,name:'BirdOS Today',cat:'News',now:'Sunrise Briefing',next:'Island Weather & Tides',prog:15,total:30,live:true},
+  {n:2,name:'Global News 24',cat:'News',now:'World Markets Close',next:'Asia Evening Edition',prog:42,total:60,live:true},
+  {n:3,name:'Cinema Gold HD',cat:'Movies',now:'Casablanca (1942)',next:"Breakfast at Tiffany's",prog:78,total:128,live:false},
+  {n:4,name:'Sports Arena',cat:'Sports',now:'Premier League: LIV vs MCI',next:'Post-Match Analysis',prog:55,total:105,live:true},
+  {n:5,name:'National Wild',cat:'Documentary',now:'Reefs of the Maldives',next:'Giants of the Deep',prog:12,total:45,live:false},
+  {n:6,name:'Bites Network',cat:'Lifestyle',now:"Chef's Table: Aurelia",next:'Street Food Asia',prog:18,total:30,live:false},
+  {n:7,name:'Wave FM TV',cat:'Music',now:'Sunset Lounge Mix',next:'Late Night Jazz',prog:25,total:60,live:true},
+  {n:8,name:'Junior Zone',cat:'Kids',now:'Ocean Explorers',next:'Dino Squad',prog:8,total:22,live:false},
+  {n:9,name:'BBC World',cat:'News',now:'Global Business Hour',next:'Focus on Asia',prog:35,total:60,live:true},
+  {n:10,name:'Cine Premier',cat:'Movies',now:'Oppenheimer (2023)',next:'Killers of the Flower Moon',prog:95,total:180,live:false},
+  {n:11,name:'Sky Sports 2',cat:'Sports',now:'F1 GP: Singapore Lap 32',next:'Pit Wall Live',prog:32,total:58,live:true},
+  {n:12,name:'Travel Globe',cat:'Lifestyle',now:'Luxury Resorts of Asia',next:'Hidden Islands',prog:20,total:45,live:false},
+];
+const TV_CHCATS=['All','News','Movies','Sports','Documentary','Lifestyle','Music','Kids'];
+/* Upsell offers — push to in-room guest TVs */
+const TV_UPSELL=[
+  {id:1,title:'Spa Serenity Package',desc:"90-min couple's massage + champagne",price:'£280',orig:'£360',cat:'Spa',active:true,pushed:4},
+  {id:2,title:'Sunset Dinner Cruise',desc:'Catamaran sail with 5-course tasting menu',price:'£195',orig:'£240',cat:'Dining',active:true,pushed:6},
+  {id:3,title:'Suite Upgrade Offer',desc:'Complimentary upgrade to Ocean Villa Suite',price:'£420',orig:'£680',cat:'Upgrade',active:true,pushed:3},
+  {id:4,title:'Private Dive Excursion',desc:'2-tank dive with marine biologist guide',price:'£160',orig:'£200',cat:'Excursion',active:false,pushed:0},
+  {id:5,title:"Chef's Table Experience",desc:'8-course omakase with wine pairing',price:'£290',orig:'£350',cat:'Dining',active:true,pushed:2},
+  {id:6,title:'Seaplane Photo Flight',desc:'30-min aerial tour of atolls',price:'£240',orig:'£300',cat:'Excursion',active:false,pushed:0},
+];
+/* Pay-per-view movies */
+const TV_PPV=[
+  {id:1,title:'Dune: Part Two',rating:'PG-13',dur:'166 min',price:'£19.99',cat:'Sci-Fi',rented:3,desc:'Paul Atreides unites with the Fremen for revenge.'},
+  {id:2,title:'Oppenheimer',rating:'R',dur:'180 min',price:'£19.99',cat:'Drama',rented:5,desc:"The story of the atomic bomb's creator."},
+  {id:3,title:'The Marvels',rating:'PG-13',dur:'105 min',price:'£14.99',cat:'Action',rented:1,desc:'Carol Danvers teams up with Ms. Marvel.'},
+  {id:4,title:'Wonka',rating:'PG',dur:'116 min',price:'£14.99',cat:'Family',rented:4,desc:"Young Willy Wonka's magical beginnings."},
+  {id:5,title:'Napoleon',rating:'R',dur:'158 min',price:'£19.99',cat:'Drama',rented:2,desc:"Ridley Scott's epic of the French emperor."},
+  {id:6,title:'Aquaman 2',rating:'PG-13',dur:'124 min',price:'£14.99',cat:'Action',rented:0,desc:'Arthur Curry faces the lost kingdom.'},
+];
+/* Room service via TV */
+const TV_ROOMSERVICE=[
+  {cat:'Breakfast',items:[{n:'Continental Breakfast',p:28,d:'15 min'},{n:'Eggs Benedict',p:32,d:'18 min'},{n:'Avocado Toast',p:22,d:'12 min'},{n:'Buttermilk Pancakes',p:24,d:'15 min'}]},
+  {cat:'Lunch',items:[{n:'Lobster Roll',p:48,d:'20 min'},{n:'Wagyu Burger',p:42,d:'18 min'},{n:'Quinoa Power Bowl',p:26,d:'12 min'}]},
+  {cat:'Dinner',items:[{n:'Catch of the Day',p:65,d:'25 min'},{n:'Tomahawk Steak',p:85,d:'30 min'},{n:'Truffle Pasta',p:48,d:'22 min'}]},
+  {cat:'Beverages',items:[{n:'Champagne Bottle',p:120,d:'10 min'},{n:'Fresh Juices',p:12,d:'8 min'},{n:'Signature Cocktails',p:22,d:'10 min'}]},
+  {cat:'Midnight',items:[{n:'Cheese Platter',p:35,d:'15 min'},{n:'Dark Chocolate Trio',p:24,d:'12 min'},{n:'Insomnia Tea Set',p:18,d:'8 min'}]},
+];
 function tvGreetText(sample){
   const p=activeProperty();
   return TV_GREET.tpl
@@ -5072,213 +5379,696 @@ function tvGreetText(sample){
     .replace(/\{room\}/g,sample.room||'—');
 }
 VIEWS.hospitalitytv = () => {
-  const on=TVS.filter(t=>t.st==='online').length, off=TVS.filter(t=>t.st==='offline').length, sb=TVS.length-on-off;
-  const byFloor={}; TVS.forEach(t=>{const f=Math.floor(t.room/100);(byFloor[f]=byFloor[f]||[]).push(t);});
-  const kpis=[['Fleet TVs',TVS.length,'screens','monitor','gold'],['Online now',on,'streaming','wifi','green'],['Standby',sb,'power-save','moon','blue'],['Offline',off,'need attention','alert','red']];
+  const roomOn=TVS.filter(t=>t.st==='online').length, roomOff=TVS.filter(t=>t.st==='offline').length;
+  const pubOn=PUB_TVZ.filter(t=>t.st==='online').length;
+  const totalScreens=TVS.length+PUB_TVZ.length;
+  const activeOffers=TV_UPSELL.filter(o=>o.active).length;
+  const ppvRevenue=TV_PPV.reduce((a,m)=>a+m.rented*parseFloat(m.price.replace('£','')),0);
+  const kpis=[
+    ['Total screens',totalScreens,'room + public','monitor','gold',''],
+    ['Online now',roomOn+pubOn,'streaming','wifi','green',''],
+    ['Active offers',activeOffers,'upsell campaigns','percent','blue',''],
+    ['PPV revenue',Math.round(ppvRevenue),'this week','video','gold','£'],
+  ];
   return `
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px" class="rise">
     ${kpis.map(k=>`
       <div class="card kpi-card" style="padding:14px 16px">
         <div class="kpi-top"><span class="kpi-ic" style="color:var(--${k[4]});background:var(--${k[4]}-soft)">${icon(k[3])}</span>
           <span class="kpi-label">${k[0]}</span></div>
-        <div class="kpi-value"><span data-count="${k[1]}">0</span></div>
+        <div class="kpi-value"><span data-count="${k[1]}" ${k[5]?`data-prefix="${k[5]}"`:''}>0</span></div>
         <div class="kpi-note" style="margin-top:6px">${k[2]}</div>
       </div>`).join('')}
   </div>
 
-  <div class="row">
-    <div class="c-8 rise">
-      <div class="card" style="margin-bottom:14px">
-        <div class="card-h"><div><div class="card-title">TV fleet · by floor</div><div class="card-sub">Select a screen to control power, volume, channel & input</div></div>
-          <div class="chips"><span class="tag tag-green">${on} online</span><span class="tag tag-amber">${sb} standby</span><span class="tag tag-red">${off} offline</span></div></div>
-        <div class="card-body">
-          ${Object.keys(byFloor).sort().map(f=>`
-            <div style="margin-bottom:12px">
-              <div style="font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin-bottom:8px">Floor ${f}</div>
-              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px">
-                ${byFloor[f].map(t=>{const st=TV_STATUS[t.st];return `
-                  <button class="room-tile" data-tv="${t.room}" style="text-align:left;padding:12px;border-radius:14px;background:var(--surface-2);border:1px solid var(--line);cursor:pointer;transition:all .2s">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-                      <b style="font-size:14px">${t.room}</b>
-                      <span data-tv-dot="${t.room}" style="width:10px;height:10px;border-radius:50%;background:${st[1]}"></span>
-                    </div>
-                    <div style="font-size:11px;color:var(--ink-2);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.guest!=='—'?t.guest:'Vacant'}</div>
-                    <div style="font-size:10px;color:var(--mut);margin-top:2px">${t.model.split(' ')[0]} · ${t.input}</div>
-                    <div style="margin-top:8px;display:flex;gap:6px;align-items:center">
-                      <span class="tag ${st[2]}" data-tv-tag="${t.room}" style="font-size:9.5px;padding:2px 7px">${st[0]}</span>
-                      ${t.greet?`<span class="tag tag-gold" style="font-size:9.5px;padding:2px 7px">${icon('sparkles')}Greeting</span>`:''}
-                    </div>
-                  </button>`;}).join('')}
-              </div>
-            </div>`).join('')}
-        </div>
-      </div>
-    </div>
-    <div class="c-4 rise rise-1">
-      <div class="card" style="margin-bottom:14px">
-        <div class="card-h"><div><div class="card-title">Screen control</div><div class="card-sub" id="tv-ctl-sub">Remote for selected TV</div></div>
-          <span class="tag tag-gold">${icon('monitor')}Live</span></div>
-        <div class="card-body" id="tv-ctl"></div>
-      </div>
+  <div class="card rise" style="margin-bottom:14px;padding:6px 10px">
+    <div class="chips" id="tv-tabs">
+      ${[['rooms','Room TVs','monitor'],['public','Public TVs','building'],['guide','Live Guide','video'],['upsell','Upsell Offers','percent'],['ppv','PPV Movies','star'],['services','Guest Services','bell']].map((t,i)=>`
+        <button class="chip ${i===0?'on':''}" data-tvtab="${t[0]}">${icon(t[2])}${t[1]}</button>`).join('')}
     </div>
   </div>
 
-  <div class="row">
-    <div class="c-7 rise rise-2">
-      <div class="card" style="margin-bottom:14px">
-        <div class="card-h"><div><div class="card-title">Greeting composer</div><div class="card-sub">Personalised welcome shown on TV at check-in</div></div>
-          <span class="tag tag-gold">${icon('sparkles')}Template</span></div>
-        <div class="card-body">
-          <textarea id="tv-greet-tpl" rows="4" style="width:100%;resize:vertical;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink);font:500 13px/1.6 var(--font-b)">${TV_GREET.tpl}</textarea>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 12px">
-            ${['{guest}','{hotel}','{room}'].map(t=>`<button class="chip" data-tv-token="${t}" style="font-size:11px">${t}</button>`).join('')}
-            <span style="flex:1"></span>
-            ${['EN','VI','FR','JA'].map(l=>`<button class="chip ${l===TV_GREET.lang?'on':''}" data-tv-lang="${l}" style="font-size:11px">${l}</button>`).join('')}
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-            <label style="font-size:11.5px;color:var(--mut);font-weight:700">Display duration
-              <select id="tv-greet-dur" class="input" style="width:100%;margin-top:6px;padding:9px 10px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink)">
-                <option value="until-dismissed" ${TV_GREET.dur==='until-dismissed'?'selected':''}>Until guest dismisses</option>
-                <option value="30s" ${TV_GREET.dur==='30s'?'selected':''}>30 seconds</option>
-                <option value="60s" ${TV_GREET.dur==='60s'?'selected':''}>60 seconds</option>
-              </select></label>
-            <div style="display:flex;flex-direction:column;gap:8px;justify-content:center;font-size:12px;font-weight:600">
-              <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="tv-greet-weather" ${TV_GREET.weather?'checked':''}/> Show weather</label>
-              <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="tv-greet-checkout" ${TV_GREET.checkout?'checked':''}/> Show check-out time</label>
-            </div>
-          </div>
-          <div style="display:flex;gap:10px">
-            <button class="btn-gold" data-tv-push="occupied" style="flex:1">${icon('send')}Push to occupied rooms</button>
-            <button class="btn-ghost" data-tv-push="all" style="flex:1">${icon('send')}Push to entire fleet</button>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="c-5 rise rise-3">
-      <div class="card" style="margin-bottom:14px">
-        <div class="card-h"><div><div class="card-title">Live preview</div><div class="card-sub" id="tv-prev-sub">What the guest sees</div></div>
-          <span class="tag tag-green">${icon('eye')}Real-time</span></div>
-        <div class="card-body">
-          <div style="border-radius:16px;padding:10px;background:linear-gradient(145deg,#1A1C22,#0C0E12);box-shadow:0 18px 40px -18px rgba(0,0,0,.55)">
-            <div id="tv-screen" style="aspect-ratio:16/9;border-radius:10px;overflow:hidden;position:relative;background:radial-gradient(120% 140% at 20% 10%,#233246 0%,#101826 55%,#0A0F1A 100%);color:#F4EFE6">
-            </div>
-            <div style="display:flex;justify-content:center;margin-top:6px"><span style="width:44px;height:4px;border-radius:99px;background:#2A2E36"></span></div>
-          </div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-h"><div><div class="card-title">Broadcast</div><div class="card-sub">Ticker message to in-room screens</div></div></div>
-        <div class="card-body">
-          <div style="display:flex;gap:8px">
-            <input id="tv-bcast-msg" class="input" placeholder="e.g. Tonight: seafood gala at Azure Beach · 19:00" style="flex:1;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink)"/>
-            <select id="tv-bcast-target" class="input" style="padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink)">
-              <option value="all">All TVs</option><option value="occupied">Occupied</option><option value="online">Online only</option>
-            </select>
-            <button class="btn-gold" id="tv-bcast-send">${icon('send')}Send</button>
-          </div>
-          <small style="display:block;margin-top:8px;color:var(--mut)">Ticker scrolls along the bottom of the home screen. Urgent broadcasts pause playback for 10s.</small>
-        </div>
-      </div>
-    </div>
-  </div>`;
+  <div id="tv-tab-content"></div>`;
 };
 INIT.hospitalitytv=()=>{
-  let sel=TVS.find(t=>t.st==='online')||TVS[0];
-  const ctl=$('#tv-ctl'), prev=$('#tv-screen');
-  function renderCtl(){
-    const st=TV_STATUS[sel.st];
-    $('#tv-ctl-sub').textContent=`Room ${sel.room} · ${sel.model} · ${sel.fw}`;
-    ctl.innerHTML=`
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-        <span class="kpi-ic" style="width:42px;height:42px;border-radius:12px;display:grid;place-items:center;color:var(--gold-deep);background:var(--gold-grad-soft)">${icon('monitor')}</span>
-        <div style="flex:1"><b style="display:block">Room ${sel.room}</b><small style="color:var(--mut)">${sel.guest!=='—'?sel.guest:'Vacant'} · ${ROOM_TYPE_META[sel.type][0]}</small></div>
-        <span class="tag ${st[2]}">${st[0]}</span>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
-        <button class="${sel.st==='online'?'btn-ghost':'btn-gold'}" id="tv-power">${icon('power')}${sel.st==='online'?'Sleep':'Wake'}</button>
-        <button class="btn-ghost" id="tv-reboot">${icon('refresh')}Reboot</button>
-      </div>
-      <div style="margin-bottom:12px">
-        <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:var(--mut);margin-bottom:6px"><span>VOLUME</span><span id="tv-vol-val">${sel.vol}</span></div>
-        <input type="range" id="tv-vol" min="0" max="60" value="${sel.vol}" style="width:100%;accent-color:var(--gold)" ${sel.st!=='online'?'disabled':''}/>
-      </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <span style="font-size:11px;font-weight:700;color:var(--mut)">CHANNEL</span>
-        <div style="display:flex;align-items:center;gap:8px">
-          <button class="btn-ghost" id="tv-ch-dn" style="padding:6px 10px" ${sel.st!=='online'?'disabled':''}>−</button>
-          <b class="num" id="tv-ch-val" style="min-width:34px;text-align:center;font-size:17px">${sel.ch}</b>
-          <button class="btn-ghost" id="tv-ch-up" style="padding:6px 10px" ${sel.st!=='online'?'disabled':''}>+</button>
-        </div>
-      </div>
-      <div style="font-size:11px;font-weight:700;color:var(--mut);margin-bottom:6px">INPUT SOURCE</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
-        ${['Live TV','Casting','HDMI 1','HDMI 2'].map(s=>`<button class="chip ${s===sel.input?'on':''}" data-tv-input="${s}" ${sel.st!=='online'?'disabled':''}>${s}</button>`).join('')}
-      </div>
-      <button class="btn-ghost" id="tv-locate" style="width:100%">${icon('eye')}Flash screen · locate TV</button>`;
-    $('#tv-power').onclick=()=>{
-      sel.st=sel.st==='online'?'standby':'online';
-      const dot=$(`[data-tv-dot="${sel.room}"]`),tag=$(`[data-tv-tag="${sel.room}"]`);
-      const ns=TV_STATUS[sel.st]; if(dot)dot.style.background=ns[1]; if(tag){tag.textContent=ns[0];tag.className='tag '+ns[2];}
-      toast(`Room ${sel.room} TV ${sel.st==='online'?'woken':'sleeping'}`, sel.st==='online'?'Resumed on '+sel.input:'Power-save mode engaged');
-      renderCtl();
-    };
-    $('#tv-reboot').onclick=()=>toast(`Rebooting TV ${sel.room}`,'Firmware '+sel.fw+' · back in ~40s','alert');
-    const vol=$('#tv-vol'); if(vol)vol.oninput=e=>{sel.vol=+e.target.value;$('#tv-vol-val').textContent=sel.vol;};
-    const chDn=$('#tv-ch-dn'),chUp=$('#tv-ch-up');
-    if(chDn)chDn.onclick=()=>{sel.ch=Math.max(1,sel.ch-1);$('#tv-ch-val').textContent=sel.ch;};
-    if(chUp)chUp.onclick=()=>{sel.ch=Math.min(99,sel.ch+1);$('#tv-ch-val').textContent=sel.ch;};
-    $$('[data-tv-input]').forEach(b=>b.onclick=()=>{sel.input=b.dataset.tvInput;renderCtl();toast(`Room ${sel.room} → ${sel.input}`,'Input source switched');});
-    $('#tv-locate').onclick=()=>toast(`Flashing screen ${sel.room}`,'Screen border pulsing gold for 15s');
+  let curTab='rooms';
+  let selTv=TVS.find(t=>t.st==='online')||TVS[0];
+  let selPub=PUB_TVZ[0];
+  let chFilter='All';
+  const root=$('#tv-tab-content');
+
+  function renderTab(tab){
+    curTab=tab;
+    $$('[data-tvtab]').forEach(b=>b.classList.toggle('on',b.dataset.tvtab===tab));
+    if(tab==='rooms')renderRooms();
+    else if(tab==='public')renderPublic();
+    else if(tab==='guide')renderGuide();
+    else if(tab==='upsell')renderUpsell();
+    else if(tab==='ppv')renderPPV();
+    else if(tab==='services')renderServices();
+    animateCounts(root);
   }
-  function renderPrev(){
-    const p=activeProperty();
-    const lines=tvGreetText({guest:sel.guest!=='—'?sel.guest:'Mr. Sharma',room:sel.room}).split('\n');
-    prev.innerHTML=`
-      <div style="position:absolute;top:10px;left:14px;right:14px;display:flex;justify-content:space-between;align-items:center;font-size:8px;letter-spacing:.14em;text-transform:uppercase;opacity:.75">
-        <span>${p.brand}</span><span>${new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})} · ${TV_GREET.lang}</span>
-      </div>
-      <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:18px">
-        <div style="width:26px;height:26px;margin-bottom:6px;opacity:.9">${BIRD}</div>
-        ${lines.map((l,i)=>i===0
-          ?`<div style="font-family:var(--font-d);font-size:17px;letter-spacing:.02em;color:#E9CE9B">${l}</div>`
-          :`<div style="font-size:8.5px;opacity:.85;margin-top:4px;max-width:85%">${l}</div>`).join('')}
-        <div style="display:flex;gap:10px;margin-top:8px;font-size:7.5px;opacity:.75">
-          ${TV_GREET.weather?`<span>${p.weather}</span>`:''}
-          ${TV_GREET.checkout?`<span>Check-out 12:00</span>`:''}
+
+  /* ============ TAB: Room TVs ============ */
+  function renderRooms(){
+    const on=TVS.filter(t=>t.st==='online').length, off=TVS.filter(t=>t.st==='offline').length, sb=TVS.length-on-off;
+    const byFloor={}; TVS.forEach(t=>{const f=Math.floor(t.room/100);(byFloor[f]=byFloor[f]||[]).push(t);});
+    root.innerHTML=`
+      <div class="row">
+        <div class="c-8 rise">
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-h"><div><div class="card-title">In-room TV fleet · by floor</div><div class="card-sub">Select a screen to control power, volume, channel & input</div></div>
+              <div class="chips"><span class="tag tag-green">${on} online</span><span class="tag tag-amber">${sb} standby</span><span class="tag tag-red">${off} offline</span></div></div>
+            <div class="card-body">
+              ${Object.keys(byFloor).sort().map(f=>`
+                <div style="margin-bottom:12px">
+                  <div style="font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin-bottom:8px">Floor ${f}</div>
+                  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px">
+                    ${byFloor[f].map(t=>{const st=TV_STATUS[t.st];return `
+                      <button class="room-tile" data-tv="${t.room}" style="text-align:left;padding:12px;border-radius:14px;background:var(--surface-2);border:1px solid var(--line);cursor:pointer;transition:all .2s">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+                          <b style="font-size:14px">${t.room}</b>
+                          <span data-tv-dot="${t.room}" style="width:10px;height:10px;border-radius:50%;background:${st[1]}"></span>
+                        </div>
+                        <div style="font-size:11px;color:var(--ink-2);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.guest!=='—'?t.guest:'Vacant'}</div>
+                        <div style="font-size:10px;color:var(--mut);margin-top:2px">${t.model.split(' ')[0]} · ${t.input}</div>
+                        <div style="margin-top:8px;display:flex;gap:4px;align-items:center;flex-wrap:wrap">
+                          <span class="tag ${st[2]}" data-tv-tag="${t.room}" style="font-size:9.5px;padding:2px 7px">${st[0]}</span>
+                          ${t.greet?`<span class="tag tag-gold" style="font-size:9px;padding:2px 6px">${icon('sparkles')}Greet</span>`:''}
+                          ${t.cast?`<span class="tag tag-blue" style="font-size:9px;padding:2px 6px">${icon('smartphone')}Cast</span>`:''}
+                          ${t.alarm?`<span class="tag tag-amber" style="font-size:9px;padding:2px 6px">${icon('clock')}${t.alarm[0]}</span>`:''}
+                        </div>
+                      </button>`;}).join('')}
+                  </div>
+                </div>`).join('')}
+            </div>
+          </div>
+        </div>
+        <div class="c-4 rise rise-1">
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-h"><div><div class="card-title">Screen control</div><div class="card-sub" id="tv-ctl-sub">Remote for selected TV</div></div>
+              <span class="tag tag-gold">${icon('monitor')}Live</span></div>
+            <div class="card-body" id="tv-ctl"></div>
+          </div>
         </div>
       </div>
-      <div style="position:absolute;left:0;right:0;bottom:0;padding:3px 12px;background:rgba(201,168,90,.16);border-top:1px solid rgba(201,168,90,.35);font-size:7.5px;white-space:nowrap;overflow:hidden">
-        <span id="tv-ticker" style="display:inline-block">${p.name} · Room service 24/7 · Spa open till 22:00 · ${TV_GREET.dur==='until-dismissed'?'Press OK to dismiss':''}</span>
+      <div class="row">
+        <div class="c-7 rise rise-2">
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-h"><div><div class="card-title">Greeting composer</div><div class="card-sub">Personalised welcome shown on TV at check-in</div></div>
+              <span class="tag tag-gold">${icon('sparkles')}Template</span></div>
+            <div class="card-body">
+              <textarea id="tv-greet-tpl" rows="4" style="width:100%;resize:vertical;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink);font:500 13px/1.6 var(--font-b)">${TV_GREET.tpl}</textarea>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 12px">
+                ${['{guest}','{hotel}','{room}'].map(t=>`<button class="chip" data-tv-token="${t}" style="font-size:11px">${t}</button>`).join('')}
+                <span style="flex:1"></span>
+                ${['EN','VI','FR','JA','AR','ZH'].map(l=>`<button class="chip ${l===TV_GREET.lang?'on':''}" data-tv-lang="${l}" style="font-size:11px">${l}</button>`).join('')}
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+                <label style="font-size:11.5px;color:var(--mut);font-weight:700">Display duration
+                  <select id="tv-greet-dur" class="input" style="width:100%;margin-top:6px;padding:9px 10px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink)">
+                    <option value="until-dismissed" ${TV_GREET.dur==='until-dismissed'?'selected':''}>Until guest dismisses</option>
+                    <option value="30s" ${TV_GREET.dur==='30s'?'selected':''}>30 seconds</option>
+                    <option value="60s" ${TV_GREET.dur==='60s'?'selected':''}>60 seconds</option>
+                  </select></label>
+                <div style="display:flex;flex-direction:column;gap:8px;justify-content:center;font-size:12px;font-weight:600">
+                  <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="tv-greet-weather" ${TV_GREET.weather?'checked':''}/> Show weather</label>
+                  <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="tv-greet-checkout" ${TV_GREET.checkout?'checked':''}/> Show check-out time</label>
+                </div>
+              </div>
+              <div style="display:flex;gap:10px">
+                <button class="btn-gold" data-tv-push="occupied" style="flex:1">${icon('send')}Push to occupied rooms</button>
+                <button class="btn-ghost" data-tv-push="all" style="flex:1">${icon('send')}Push to entire fleet</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="c-5 rise rise-3">
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-h"><div><div class="card-title">Live preview</div><div class="card-sub" id="tv-prev-sub">What the guest sees</div></div>
+              <span class="tag tag-green">${icon('eye')}Real-time</span></div>
+            <div class="card-body">
+              <div style="border-radius:16px;padding:10px;background:linear-gradient(145deg,#1A1C22,#0C0E12);box-shadow:0 18px 40px -18px rgba(0,0,0,.55)">
+                <div id="tv-screen" style="aspect-ratio:16/9;border-radius:10px;overflow:hidden;position:relative;background:radial-gradient(120% 140% at 20% 10%,#233246 0%,#101826 55%,#0A0F1A 100%);color:#F4EFE6"></div>
+                <div style="display:flex;justify-content:center;margin-top:6px"><span style="width:44px;height:4px;border-radius:99px;background:#2A2E36"></span></div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-h"><div><div class="card-title">Broadcast</div><div class="card-sub">Ticker message to in-room screens</div></div></div>
+            <div class="card-body">
+              <div style="display:flex;gap:8px">
+                <input id="tv-bcast-msg" class="input" placeholder="e.g. Tonight: seafood gala at Azure Beach · 19:00" style="flex:1;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink)"/>
+                <select id="tv-bcast-target" class="input" style="padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink)">
+                  <option value="all">All TVs</option><option value="occupied">Occupied</option><option value="online">Online only</option>
+                </select>
+                <button class="btn-gold" id="tv-bcast-send">${icon('send')}Send</button>
+              </div>
+              <small style="display:block;margin-top:8px;color:var(--mut)">Ticker scrolls along the bottom of the home screen. Urgent broadcasts pause playback for 10s.</small>
+            </div>
+          </div>
+        </div>
       </div>`;
-    $('#tv-prev-sub').textContent=`Room ${sel.room} screen · ${sel.st==='offline'?'TV offline — queued':sel.st}`;
+    wireRoomTvs();
   }
-  $$('[data-tv]').forEach(b=>b.onclick=()=>{
-    sel=TVS.find(t=>t.room===+b.dataset.tv)||sel;
-    $$('[data-tv]').forEach(x=>x.style.outline=(x===b)?'2px solid var(--gold)':'none');
+  function wireRoomTvs(){
+    const ctl=$('#tv-ctl'), prev=$('#tv-screen');
+    function renderCtl(){
+      const st=TV_STATUS[selTv.st];
+      const chInfo=TV_CHANNELS.find(c=>c.n===selTv.ch);
+      const sub=$('#tv-ctl-sub'); if(sub)sub.textContent=`Room ${selTv.room} · ${selTv.model} · ${selTv.fw}`;
+      ctl.innerHTML=`
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <span class="kpi-ic" style="width:42px;height:42px;border-radius:12px;display:grid;place-items:center;color:var(--gold-deep);background:var(--gold-grad-soft)">${icon('monitor')}</span>
+          <div style="flex:1"><b style="display:block">Room ${selTv.room}</b><small style="color:var(--mut)">${selTv.guest!=='—'?selTv.guest:'Vacant'} · ${ROOM_TYPE_META[selTv.type][0]}</small></div>
+          <span class="tag ${st[2]}">${st[0]}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+          <button class="${selTv.st==='online'?'btn-ghost':'btn-gold'}" id="tv-power">${icon('power')}${selTv.st==='online'?'Sleep':'Wake'}</button>
+          <button class="btn-ghost" id="tv-reboot">${icon('refresh')}Reboot</button>
+        </div>
+        <div style="margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:var(--mut);margin-bottom:6px"><span>VOLUME</span><span id="tv-vol-val">${selTv.vol}</span></div>
+          <input type="range" id="tv-vol" min="0" max="60" value="${selTv.vol}" style="width:100%;accent-color:var(--gold)" ${selTv.st!=='online'?'disabled':''}/>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <span style="font-size:11px;font-weight:700;color:var(--mut)">CHANNEL</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <button class="btn-ghost" id="tv-ch-dn" style="padding:6px 10px" ${selTv.st!=='online'?'disabled':''}>−</button>
+            <b class="num" id="tv-ch-val" style="min-width:34px;text-align:center;font-size:17px">${selTv.ch}</b>
+            <button class="btn-ghost" id="tv-ch-up" style="padding:6px 10px" ${selTv.st!=='online'?'disabled':''}>+</button>
+          </div>
+        </div>
+        ${chInfo?`<div style="background:var(--surface-2);border-radius:10px;padding:8px 10px;margin-bottom:12px;font-size:11px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+            <b style="font-size:12px">${chInfo.name}</b>${chInfo.live?'<span style="color:#E06B6B;font-weight:800;font-size:9px;letter-spacing:.1em">● LIVE</span>':''}
+          </div>
+          <div style="color:var(--mut)">${chInfo.now}</div>
+          <div style="height:4px;background:var(--line);border-radius:99px;margin-top:6px;overflow:hidden">
+            <div style="height:100%;width:${(chInfo.prog/chInfo.total*100).toFixed(0)}%;background:var(--gold-grad)"></div>
+          </div>
+        </div>`:''}
+        <div style="font-size:11px;font-weight:700;color:var(--mut);margin-bottom:6px">INPUT SOURCE</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+          ${['Live TV','Casting','HDMI 1','HDMI 2'].map(s=>`<button class="chip ${s===selTv.input?'on':''}" data-tv-input="${s}" ${selTv.st!=='online'?'disabled':''}>${s}</button>`).join('')}
+        </div>
+        <button class="btn-ghost" id="tv-locate" style="width:100%;margin-bottom:8px">${icon('eye')}Flash screen · locate TV</button>
+        <div style="display:flex;gap:6px">
+          ${selTv.cast?`<span class="tag tag-blue" style="flex:1;text-align:center;padding:6px">${icon('smartphone')}Cast ready</span>`:''}
+          ${selTv.alarm?`<span class="tag tag-amber" style="flex:1;text-align:center;padding:6px">${icon('clock')}Alarm ${selTv.alarm[0]}</span>`:''}
+        </div>`;
+      $('#tv-power').onclick=()=>{
+        selTv.st=selTv.st==='online'?'standby':'online';
+        const dot=$(`[data-tv-dot="${selTv.room}"]`),tag=$(`[data-tv-tag="${selTv.room}"]`);
+        const ns=TV_STATUS[selTv.st]; if(dot)dot.style.background=ns[1]; if(tag){tag.textContent=ns[0];tag.className='tag '+ns[2];}
+        toast(`Room ${selTv.room} TV ${selTv.st==='online'?'woken':'sleeping'}`, selTv.st==='online'?'Resumed on '+selTv.input:'Power-save mode engaged');
+        renderCtl(); renderPrev();
+      };
+      $('#tv-reboot').onclick=()=>toast(`Rebooting TV ${selTv.room}`,'Firmware '+selTv.fw+' · back in ~40s','alert');
+      const vol=$('#tv-vol'); if(vol)vol.oninput=e=>{selTv.vol=+e.target.value;$('#tv-vol-val').textContent=selTv.vol;};
+      const chDn=$('#tv-ch-dn'),chUp=$('#tv-ch-up');
+      if(chDn)chDn.onclick=()=>{selTv.ch=Math.max(1,selTv.ch-1);renderCtl();};
+      if(chUp)chUp.onclick=()=>{selTv.ch=Math.min(99,selTv.ch+1);renderCtl();};
+      $$('[data-tv-input]').forEach(b=>b.onclick=()=>{selTv.input=b.dataset.tvInput;renderCtl();toast(`Room ${selTv.room} → ${selTv.input}`,'Input source switched');});
+      $('#tv-locate').onclick=()=>toast(`Flashing screen ${selTv.room}`,'Screen border pulsing gold for 15s');
+    }
+    function renderPrev(){
+      const p=activeProperty();
+      const lines=tvGreetText({guest:selTv.guest!=='—'?selTv.guest:'Mr. Sharma',room:selTv.room}).split('\n');
+      prev.innerHTML=`
+        <div style="position:absolute;top:10px;left:14px;right:14px;display:flex;justify-content:space-between;align-items:center;font-size:8px;letter-spacing:.14em;text-transform:uppercase;opacity:.75">
+          <span>${p.brand}</span><span>${new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})} · ${TV_GREET.lang}</span>
+        </div>
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:18px">
+          <div style="width:26px;height:26px;margin-bottom:6px;opacity:.9">${BIRD}</div>
+          ${lines.map((l,i)=>i===0
+            ?`<div style="font-family:var(--font-d);font-size:17px;letter-spacing:.02em;color:#E9CE9B">${l}</div>`
+            :`<div style="font-size:8.5px;opacity:.85;margin-top:4px;max-width:85%">${l}</div>`).join('')}
+          <div style="display:flex;gap:10px;margin-top:8px;font-size:7.5px;opacity:.75">
+            ${TV_GREET.weather?`<span>${p.weather}</span>`:''}
+            ${TV_GREET.checkout?`<span>Check-out 12:00</span>`:''}
+          </div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:0;padding:3px 12px;background:rgba(201,168,90,.16);border-top:1px solid rgba(201,168,90,.35);font-size:7.5px;white-space:nowrap;overflow:hidden">
+          <span id="tv-ticker" style="display:inline-block">${p.name} · Room service 24/7 · Spa open till 22:00 · ${TV_GREET.dur==='until-dismissed'?'Press OK to dismiss':''}</span>
+        </div>`;
+      const ps=$('#tv-prev-sub'); if(ps)ps.textContent=`Room ${selTv.room} screen · ${selTv.st==='offline'?'TV offline — queued':selTv.st}`;
+    }
+    $$('[data-tv]').forEach(b=>b.onclick=()=>{
+      selTv=TVS.find(t=>t.room===+b.dataset.tv)||selTv;
+      $$('[data-tv]').forEach(x=>x.style.outline=(x===b)?'2px solid var(--gold)':'none');
+      renderCtl(); renderPrev();
+    });
+    const tpl=$('#tv-greet-tpl');
+    if(tpl){
+      tpl.addEventListener('input',()=>{TV_GREET.tpl=tpl.value;renderPrev();});
+      $$('[data-tv-token]').forEach(b=>b.onclick=()=>{const t=b.dataset.tvToken;const s=tpl.selectionStart||tpl.value.length;tpl.value=tpl.value.slice(0,s)+t+tpl.value.slice(tpl.selectionEnd||s);TV_GREET.tpl=tpl.value;tpl.focus();renderPrev();});
+      $$('[data-tv-lang]').forEach(b=>b.onclick=()=>{TV_GREET.lang=b.dataset.tvLang;$$('[data-tv-lang]').forEach(x=>x.classList.toggle('on',x===b));renderPrev();});
+      $('#tv-greet-dur').onchange=e=>{TV_GREET.dur=e.target.value;renderPrev();};
+      $('#tv-greet-weather').onchange=e=>{TV_GREET.weather=e.target.checked;renderPrev();};
+      $('#tv-greet-checkout').onchange=e=>{TV_GREET.checkout=e.target.checked;renderPrev();};
+      $$('[data-tv-push]').forEach(b=>b.onclick=()=>{
+        const n=b.dataset.tvPush==='all'?TVS.length:TVS.filter(t=>t.st==='online').length;
+        toast('Greeting pushed',`Welcome template live on ${n} screen${n>1?'s':''} · ${TV_GREET.lang}`);
+      });
+      $('#tv-bcast-send').onclick=()=>{
+        const msg=$('#tv-bcast-msg').value.trim();
+        if(!msg){toast('Nothing to broadcast','Type a ticker message first','alert');return;}
+        const tg=$('#tv-bcast-target').value;
+        const n=tg==='all'?TVS.length:tg==='occupied'?TVS.filter(t=>t.st==='online').length:TVS.filter(t=>t.st!=='offline').length;
+        const tick=$('#tv-ticker'); if(tick)tick.textContent=msg;
+        toast('Broadcast sent',`"${msg.slice(0,42)}${msg.length>42?'…':''}" → ${n} screens`);
+        $('#tv-bcast-msg').value='';
+      };
+    }
+    const firstBtn=$(`[data-tv="${selTv.room}"]`); if(firstBtn)firstBtn.style.outline='2px solid var(--gold)';
     renderCtl(); renderPrev();
-  });
-  const tpl=$('#tv-greet-tpl');
-  tpl.addEventListener('input',()=>{TV_GREET.tpl=tpl.value;renderPrev();});
-  $$('[data-tv-token]').forEach(b=>b.onclick=()=>{const t=b.dataset.tvToken;const s=tpl.selectionStart||tpl.value.length;tpl.value=tpl.value.slice(0,s)+t+tpl.value.slice(tpl.selectionEnd||s);TV_GREET.tpl=tpl.value;tpl.focus();renderPrev();});
-  $$('[data-tv-lang]').forEach(b=>b.onclick=()=>{TV_GREET.lang=b.dataset.tvLang;$$('[data-tv-lang]').forEach(x=>x.classList.toggle('on',x===b));renderPrev();});
-  $('#tv-greet-dur').onchange=e=>{TV_GREET.dur=e.target.value;renderPrev();};
-  $('#tv-greet-weather').onchange=e=>{TV_GREET.weather=e.target.checked;renderPrev();};
-  $('#tv-greet-checkout').onchange=e=>{TV_GREET.checkout=e.target.checked;renderPrev();};
-  $$('[data-tv-push]').forEach(b=>b.onclick=()=>{
-    const n=b.dataset.tvPush==='all'?TVS.length:TVS.filter(t=>t.st==='online').length;
-    toast('Greeting pushed',`Welcome template live on ${n} screen${n>1?'s':''} · ${TV_GREET.lang}`);
-  });
-  $('#tv-bcast-send').onclick=()=>{
-    const msg=$('#tv-bcast-msg').value.trim();
-    if(!msg){toast('Nothing to broadcast','Type a ticker message first','alert');return;}
-    const tg=$('#tv-bcast-target').value;
-    const n=tg==='all'?TVS.length:tg==='occupied'?TVS.filter(t=>t.st==='online').length:TVS.filter(t=>t.st!=='offline').length;
-    const tick=$('#tv-ticker'); if(tick)tick.textContent=msg;
-    toast('Broadcast sent',`“${msg.slice(0,42)}${msg.length>42?'…':''}” → ${n} screens`);
-    $('#tv-bcast-msg').value='';
-  };
-  const firstBtn=$(`[data-tv="${sel.room}"]`); if(firstBtn)firstBtn.style.outline='2px solid var(--gold)';
-  renderCtl(); renderPrev();
+  }
+
+  /* ============ TAB: Public TVs ============ */
+  function renderPublic(){
+    const byZone={}; PUB_TVZ.forEach(t=>{(byZone[t.zone]=byZone[t.zone]||[]).push(t);});
+    root.innerHTML=`
+      <div class="row">
+        <div class="c-8 rise">
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-h"><div><div class="card-title">Public area screens · by zone</div><div class="card-sub">Lobby, pool, dining, wellness, meetings, recreation & elevator banks</div></div>
+              <div class="chips"><span class="tag tag-green">${PUB_TVZ.filter(t=>t.st==='online').length} online</span><span class="tag tag-amber">${PUB_TVZ.filter(t=>t.st==='standby').length} standby</span></div></div>
+            <div class="card-body">
+              ${Object.keys(byZone).map(zone=>`
+                <div style="margin-bottom:14px">
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                    <span style="width:8px;height:8px;border-radius:50%;background:var(--${PUB_ZONE_COLORS[zone]||'gold'})"></span>
+                    <span style="font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--mut)">${zone}</span>
+                  </div>
+                  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px">
+                    ${byZone[zone].map(t=>{const st=TV_STATUS[t.st];return `
+                      <button class="room-tile" data-pub="${t.id}" style="text-align:left;padding:12px;border-radius:14px;background:var(--surface-2);border:1px solid var(--line);cursor:pointer;transition:all .2s">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+                          <b style="font-size:12.5px">${t.loc}</b>
+                          <span data-pub-dot="${t.id}" style="width:10px;height:10px;border-radius:50%;background:${st[1]}"></span>
+                        </div>
+                        <div style="font-size:10px;color:var(--mut)">${t.model}</div>
+                        <div style="font-size:10px;color:var(--ink-2);margin-top:2px">CH ${t.ch} · ${t.input}</div>
+                        ${t.loop!=='—'?`<div style="font-size:9.5px;color:var(--gold-deep);margin-top:4px;font-weight:600">${icon('refresh')}${t.loop}</div>`:''}
+                        <div style="margin-top:8px"><span class="tag ${st[2]}" data-pub-tag="${t.id}" style="font-size:9.5px;padding:2px 7px">${st[0]}</span></div>
+                      </button>`;}).join('')}
+                  </div>
+                </div>`).join('')}
+            </div>
+          </div>
+        </div>
+        <div class="c-4 rise rise-1">
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-h"><div><div class="card-title">Public screen control</div><div class="card-sub" id="pub-ctl-sub">Select a public screen</div></div>
+              <span class="tag tag-gold">${icon('building')}Public</span></div>
+            <div class="card-body" id="pub-ctl"></div>
+          </div>
+          <div class="card">
+            <div class="card-h"><div><div class="card-title">Info loop scheduler</div><div class="card-sub">Push ambient content to lobby & elevator screens</div></div></div>
+            <div class="card-body">
+              <div style="display:grid;gap:8px">
+                ${['Ambient Resort Film','Brand Channel','Wayfinding + Promos','Spa Menu & Pricing','Event Highlights','Weather + Sunset Time'].map(l=>`
+                  <button class="btn-ghost" data-loop-push="${l}" style="justify-content:flex-start;text-align:left">${icon('send')}${l}</button>`).join('')}
+              </div>
+              <small style="display:block;margin-top:8px;color:var(--mut)">Pushes the selected loop to all lobby & elevator screens instantly.</small>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    wirePublic();
+  }
+  function wirePublic(){
+    const ctl=$('#pub-ctl');
+    function renderCtl(){
+      const st=TV_STATUS[selPub.st];
+      const sub=$('#pub-ctl-sub'); if(sub)sub.textContent=`${selPub.loc} · ${selPub.model}`;
+      ctl.innerHTML=`
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <span class="kpi-ic" style="width:42px;height:42px;border-radius:12px;display:grid;place-items:center;color:var(--gold-deep);background:var(--gold-grad-soft)">${icon('building')}</span>
+          <div style="flex:1"><b style="display:block">${selPub.loc}</b><small style="color:var(--mut)">${selPub.zone} · ${selPub.model}</small></div>
+          <span class="tag ${st[2]}">${st[0]}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+          <button class="${selPub.st==='online'?'btn-ghost':'btn-gold'}" id="pub-power">${icon('power')}${selPub.st==='online'?'Sleep':'Wake'}</button>
+          <button class="btn-ghost" id="pub-reboot">${icon('refresh')}Reboot</button>
+        </div>
+        <div style="margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:var(--mut);margin-bottom:6px"><span>VOLUME</span><span id="pub-vol-val">${selPub.vol}</span></div>
+          <input type="range" id="pub-vol" min="0" max="40" value="${selPub.vol}" style="width:100%;accent-color:var(--gold)" ${selPub.st!=='online'?'disabled':''}/>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <span style="font-size:11px;font-weight:700;color:var(--mut)">CHANNEL</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <button class="btn-ghost" id="pub-ch-dn" style="padding:6px 10px" ${selPub.st!=='online'?'disabled':''}>−</button>
+            <b class="num" id="pub-ch-val" style="min-width:34px;text-align:center;font-size:17px">${selPub.ch}</b>
+            <button class="btn-ghost" id="pub-ch-up" style="padding:6px 10px" ${selPub.st!=='online'?'disabled':''}>+</button>
+          </div>
+        </div>
+        <div style="font-size:11px;font-weight:700;color:var(--mut);margin-bottom:6px">INPUT SOURCE</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+          ${['Live TV','Info Loop','HDMI 1','HDMI 2'].map(s=>`<button class="chip ${s===selPub.input?'on':''}" data-pub-input="${s}" ${selPub.st!=='online'?'disabled':''}>${s}</button>`).join('')}
+        </div>
+        ${selPub.loop!=='—'?`<div style="background:var(--surface-2);border-radius:10px;padding:8px 10px;font-size:11px;color:var(--mut)">Active loop: <b style="color:var(--gold-deep)">${selPub.loop}</b></div>`:''}`;
+      $('#pub-power').onclick=()=>{
+        selPub.st=selPub.st==='online'?'standby':'online';
+        const dot=$(`[data-pub-dot="${selPub.id}"]`),tag=$(`[data-pub-tag="${selPub.id}"]`);
+        const ns=TV_STATUS[selPub.st]; if(dot)dot.style.background=ns[1]; if(tag){tag.textContent=ns[0];tag.className='tag '+ns[2];}
+        toast(`${selPub.loc} ${selPub.st==='online'?'woken':'sleeping'}`, selPub.zone+' screen');
+        renderCtl();
+      };
+      $('#pub-reboot').onclick=()=>toast(`Rebooting ${selPub.loc}`,'Screen back in ~30s','alert');
+      const vol=$('#pub-vol'); if(vol)vol.oninput=e=>{selPub.vol=+e.target.value;$('#pub-vol-val').textContent=selPub.vol;};
+      const chDn=$('#pub-ch-dn'),chUp=$('#pub-ch-up');
+      if(chDn)chDn.onclick=()=>{selPub.ch=Math.max(1,selPub.ch-1);$('#pub-ch-val').textContent=selPub.ch;};
+      if(chUp)chUp.onclick=()=>{selPub.ch=Math.min(99,selPub.ch+1);$('#pub-ch-val').textContent=selPub.ch;};
+      $$('[data-pub-input]').forEach(b=>b.onclick=()=>{selPub.input=b.dataset.pubInput;renderCtl();toast(`${selPub.loc} → ${selPub.input}`,'Input switched');});
+    }
+    $$('[data-pub]').forEach(b=>b.onclick=()=>{
+      selPub=PUB_TVZ.find(t=>t.id===b.dataset.pub)||selPub;
+      $$('[data-pub]').forEach(x=>x.style.outline=(x===b)?'2px solid var(--gold)':'none');
+      renderCtl();
+    });
+    $$('[data-loop-push]').forEach(b=>b.onclick=()=>{
+      const loop=b.dataset.loopPush;
+      const targets=PUB_TVZ.filter(t=>t.zone==='Lobby'||t.input==='Info Loop');
+      targets.forEach(t=>{t.loop=loop;t.input='Info Loop';});
+      toast('Loop pushed',`${loop} → ${targets.length} lobby & elevator screens`);
+      renderCtl();
+    });
+    const firstBtn=$(`[data-pub="${selPub.id}"]`); if(firstBtn)firstBtn.style.outline='2px solid var(--gold)';
+    renderCtl();
+  }
+
+  /* ============ TAB: Live Guide ============ */
+  function renderGuide(){
+    const chans=chFilter==='All'?TV_CHANNELS:TV_CHANNELS.filter(c=>c.cat===chFilter);
+    const now=new Date();
+    const timeStr=now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    root.innerHTML=`
+      <div class="card rise" style="margin-bottom:14px">
+        <div class="card-h"><div><div class="card-title">Live TV channel guide</div><div class="card-sub">Real-time program schedule · ${TV_CHANNELS.filter(c=>c.live).length} live channels · updated ${timeStr}</div></div>
+          <span class="tag tag-red">${icon('activity')}Live</span></div>
+        <div class="chips" id="guide-cats" style="padding:0 12px 12px">
+          ${TV_CHCATS.map(c=>`<button class="chip ${c===chFilter?'on':''}" data-chcat="${c}" style="font-size:11px">${c}</button>`).join('')}
+        </div>
+      </div>
+      <div class="card rise rise-1">
+        <div class="card-h"><div><div class="card-title">Now showing</div><div class="card-sub">Click a channel to tune the selected room TV</div></div></div>
+        <div class="card-body" style="padding:0">
+          <table class="tbl" id="guide-table">
+            <thead><tr><th style="width:48px">CH</th><th>Channel</th><th>Category</th><th>Now playing</th><th style="width:120px">Progress</th><th>Next</th><th></th></tr></thead>
+            <tbody>
+              ${chans.map(c=>{
+                const pct=(c.prog/c.total*100).toFixed(0);
+                const chIcon=c.cat==='News'?'info':c.cat==='Movies'?'video':c.cat==='Sports'?'activity':c.cat==='Music'?'headphones':c.cat==='Kids'?'sparkles':'eye';
+                return `
+                <tr data-guide-ch="${c.n}">
+                  <td><b class="num" style="font-size:15px">${c.n}</b></td>
+                  <td><div class="cell-main"><span class="av av-32 av-2" style="background:var(--${c.live?'red':'blue'}-soft);color:var(--${c.live?'red':'blue'})">${icon(chIcon)}</span>
+                    <div><b>${c.name}</b>${c.live?'<span style="color:#E06B6B;font-weight:800;font-size:9px;margin-left:6px;letter-spacing:.1em">● LIVE</span>':''}</div></div></td>
+                  <td><span class="tag tag-grey">${c.cat}</span></td>
+                  <td style="font-size:12px;font-weight:600">${c.now}</td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:6px">
+                      <div style="flex:1;height:5px;background:var(--line);border-radius:99px;overflow:hidden"><div style="height:100%;width:${pct}%;background:var(--gold-grad);border-radius:99px"></div></div>
+                      <span style="font-size:10px;color:var(--mut)">${pct}%</span>
+                    </div>
+                  </td>
+                  <td style="font-size:11px;color:var(--mut)">${c.next}</td>
+                  <td style="text-align:right"><button class="icon-btn" data-tune="${c.n}" title="Tune selected room TV">${icon('chevronRight')}</button></td>
+                </tr>`;}).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card rise rise-2" style="margin-top:14px">
+        <div class="card-h"><div><div class="card-title">Tune to channel</div><div class="card-sub">Push channel to room TVs</div></div>
+          <span class="tag tag-gold">${icon('monitor')}Room ${selTv.room}</span></div>
+        <div class="card-body">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <span style="font-size:12px;color:var(--mut)">Selected room:</span>
+            <b>Room ${selTv.room}</b>
+            <span style="flex:1"></span>
+            <select id="guide-room-sel" class="input" style="padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink)">
+              ${TVS.map(t=>`<option value="${t.room}" ${t.room===selTv.room?'selected':''}>Room ${t.room}${t.guest!=='—'?' ('+t.guest+')':''}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+      </div>`;
+    wireGuide();
+  }
+  function wireGuide(){
+    $$('[data-chcat]').forEach(b=>b.onclick=()=>{chFilter=b.dataset.chcat;renderGuide();});
+    $$('[data-tune]').forEach(b=>b.onclick=()=>{
+      const ch=+b.dataset.tune;
+      selTv.ch=ch;
+      const c=TV_CHANNELS.find(x=>x.n===ch);
+      toast(`Room ${selTv.room} tuned to CH ${ch}`,c?c.now:'Channel changed');
+    });
+    const roomSel=$('#guide-room-sel');
+    if(roomSel)roomSel.onchange=e=>{
+      selTv=TVS.find(t=>t.room===+e.target.value)||selTv;
+      renderGuide();
+    };
+  }
+
+  /* ============ TAB: Upsell Offers ============ */
+  function renderUpsell(){
+    const active=TV_UPSELL.filter(o=>o.active);
+    const totalPush=TV_UPSELL.reduce((a,o)=>a+o.pushed,0);
+    const revenue=TV_UPSELL.reduce((a,o)=>a+o.pushed*parseFloat(o.price.replace('£','')),0);
+    root.innerHTML=`
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px" class="rise">
+        ${[['Active offers',active.length,'live campaigns','percent','blue',''],['Total pushes',totalPush,'to guest TVs','send','green',''],['Est. revenue',Math.round(revenue),'£ from upsell','dollar','gold','£']].map(k=>`
+          <div class="card kpi-card" style="padding:14px 16px">
+            <div class="kpi-top"><span class="kpi-ic" style="color:var(--${k[4]});background:var(--${k[4]}-soft)">${icon(k[3])}</span>
+              <span class="kpi-label">${k[0]}</span></div>
+            <div class="kpi-value"><span data-count="${k[1]}" ${k[5]?`data-prefix="${k[5]}"`:''}>0</span></div>
+            <div class="kpi-note" style="margin-top:6px">${k[2]}</div>
+          </div>`).join('')}
+      </div>
+      <div class="card rise">
+        <div class="card-h"><div><div class="card-title">Upsell offer manager</div><div class="card-sub">Push dining deals, spa packages, upgrades & excursions to guest TVs</div></div>
+          <span class="tag tag-gold">${icon('percent')}${active.length} active</span></div>
+        <div class="card-body" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px">
+          ${TV_UPSELL.map(o=>`
+            <div style="border:1px solid var(--line);border-radius:16px;padding:16px;background:var(--surface-2);transition:all .2s;${o.active?'':'opacity:.6'}">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">
+                <span class="tag tag-grey" style="font-size:9.5px">${o.cat}</span>
+                <button class="chip ${o.active?'on':''}" data-offer-toggle="${o.id}" style="font-size:10px;padding:3px 10px">${o.active?'Active':'Inactive'}</button>
+              </div>
+              <b style="font-size:15px;display:block;margin-bottom:4px">${o.title}</b>
+              <p style="font-size:11.5px;color:var(--mut);margin:0 0 10px;line-height:1.5">${o.desc}</p>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                <div style="display:flex;align-items:baseline;gap:6px">
+                  <b style="font-size:18px;color:var(--gold-deep);font-family:var(--font-d)">${o.price}</b>
+                  <span style="font-size:11px;color:var(--mut);text-decoration:line-through">${o.orig}</span>
+                </div>
+                <span style="font-size:10px;color:var(--mut)">${icon('send')}${o.pushed} pushed</span>
+              </div>
+              <div style="display:flex;gap:6px">
+                <button class="btn-gold" data-offer-push="${o.id}" style="flex:1;font-size:11px;padding:7px" ${o.active?'':'disabled'}>${icon('send')}Push to rooms</button>
+                <button class="btn-ghost" data-offer-preview="${o.id}" style="font-size:11px;padding:7px">${icon('eye')}</button>
+              </div>
+            </div>`).join('')}
+        </div>
+      </div>`;
+    wireUpsell();
+  }
+  function wireUpsell(){
+    $$('[data-offer-toggle]').forEach(b=>b.onclick=()=>{
+      const id=+b.dataset.offerToggle;
+      const o=TV_UPSELL.find(x=>x.id===id);
+      if(o){o.active=!o.active;renderUpsell();toast(`Offer ${o.active?'activated':'deactivated'}`,o.title);}
+    });
+    $$('[data-offer-push]').forEach(b=>b.onclick=()=>{
+      const id=+b.dataset.offerPush;
+      const o=TV_UPSELL.find(x=>x.id===id);
+      if(o){o.pushed++;toast('Offer pushed to rooms',`${o.title} → ${TVS.filter(t=>t.st==='online').length} screens`);renderUpsell();}
+    });
+    $$('[data-offer-preview]').forEach(b=>b.onclick=()=>{
+      const id=+b.dataset.offerPreview;
+      const o=TV_UPSELL.find(x=>x.id===id);
+      if(o)toast('Offer preview',`${o.title} · ${o.price} (was ${o.orig})`);
+    });
+  }
+
+  /* ============ TAB: PPV Movies ============ */
+  function renderPPV(){
+    const totalRevenue=TV_PPV.reduce((a,m)=>a+m.rented*parseFloat(m.price.replace('£','')),0);
+    const totalRented=TV_PPV.reduce((a,m)=>a+m.rented,0);
+    root.innerHTML=`
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px" class="rise">
+        ${[['Catalog',TV_PPV.length,'titles available','video','blue',''],['Total rentals',totalRented,'this week','star','green',''],['PPV revenue',Math.round(totalRevenue),'£ gross','dollar','gold','£']].map(k=>`
+          <div class="card kpi-card" style="padding:14px 16px">
+            <div class="kpi-top"><span class="kpi-ic" style="color:var(--${k[4]});background:var(--${k[4]}-soft)">${icon(k[3])}</span>
+              <span class="kpi-label">${k[0]}</span></div>
+            <div class="kpi-value"><span data-count="${k[1]}" ${k[5]?`data-prefix="${k[5]}"`:''}>0</span></div>
+            <div class="kpi-note" style="margin-top:6px">${k[2]}</div>
+          </div>`).join('')}
+      </div>
+      <div class="card rise">
+        <div class="card-h"><div><div class="card-title">Pay-per-view catalog</div><div class="card-sub">Latest releases · charged to room folio at checkout</div></div>
+          <span class="tag tag-gold">${icon('star')}Premium</span></div>
+        <div class="card-body" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px">
+          ${TV_PPV.map(m=>`
+            <div style="border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--surface-2)">
+              <div style="aspect-ratio:16/9;background:linear-gradient(145deg,#1A1C22,#0C0E12);display:flex;align-items:center;justify-content:center;position:relative">
+                <div style="text-align:center;color:#F4EFE6;padding:14px">
+                  <div style="font-family:var(--font-d);font-size:18px;letter-spacing:.02em">${m.title}</div>
+                  <div style="font-size:10px;opacity:.6;margin-top:4px">${m.cat} · ${m.dur}</div>
+                </div>
+                <span style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,.6);color:#E9CE9B;font-size:9px;font-weight:800;padding:3px 8px;border-radius:99px">${m.rating}</span>
+                ${m.rented>0?`<span style="position:absolute;bottom:8px;left:8px;background:rgba(0,0,0,.6);color:#6FCF97;font-size:9px;font-weight:700;padding:3px 8px;border-radius:99px">${icon('star')}${m.rented} rented</span>`:''}
+              </div>
+              <div style="padding:12px">
+                <p style="font-size:11px;color:var(--mut);margin:0 0 8px;line-height:1.5">${m.desc}</p>
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <b style="font-size:16px;color:var(--gold-deep);font-family:var(--font-d)">${m.price}</b>
+                  <div style="display:flex;gap:6px">
+                    <button class="btn-ghost" data-ppv-preview="${m.id}" style="font-size:10px;padding:5px 8px">${icon('eye')}Trailer</button>
+                    <button class="btn-gold" data-ppv-rent="${m.id}" style="font-size:10px;padding:5px 10px">${icon('plus')}Rent</button>
+                  </div>
+                </div>
+              </div>
+            </div>`).join('')}
+        </div>
+      </div>`;
+    wirePPV();
+  }
+  function wirePPV(){
+    $$('[data-ppv-rent]').forEach(b=>b.onclick=()=>{
+      const id=+b.dataset.ppvRent;
+      const m=TV_PPV.find(x=>x.id===id);
+      if(m){m.rented++;toast('Movie rented',`${m.title} · ${m.price} → Room ${selTv.room} folio`);renderPPV();}
+    });
+    $$('[data-ppv-preview]').forEach(b=>b.onclick=()=>{
+      const id=+b.dataset.ppvPreview;
+      const m=TV_PPV.find(x=>x.id===id);
+      if(m)toast('Trailer playing',`${m.title} · ${m.dur}`);
+    });
+  }
+
+  /* ============ TAB: Guest Services ============ */
+  function renderServices(){
+    const occupiedTVs=TVS.filter(t=>t.st==='online');
+    const alarms=TVS.filter(t=>t.alarm);
+    root.innerHTML=`
+      <div class="row">
+        <div class="c-7 rise">
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-h"><div><div class="card-title">Room service · order via TV</div><div class="card-sub">Guests order from the in-room TV · kitchen receives live ticket</div></div>
+              <span class="tag tag-gold">${icon('utensils')}Menu</span></div>
+            <div class="card-body" id="rs-body">
+              ${TV_ROOMSERVICE.map(cat=>`
+                <div style="margin-bottom:14px">
+                  <div style="font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin-bottom:8px">${cat.cat}</div>
+                  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">
+                    ${cat.items.map(item=>`
+                      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:10px;background:var(--surface-2);border:1px solid var(--line)">
+                        <div><b style="font-size:12px;display:block">${item.n}</b><small style="color:var(--mut)">${item.d} · $${item.p}</small></div>
+                        <button class="btn-ghost" data-rs-add="${item.n}" data-rs-price="${item.p}" style="padding:5px 8px;font-size:11px">${icon('plus')}Add</button>
+                      </div>`).join('')}
+                  </div>
+                </div>`).join('')}
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-h"><div><div class="card-title">Casting & connectivity</div><div class="card-sub">Manage guest device casting to in-room TVs</div></div></div>
+            <div class="card-body">
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px">
+                ${occupiedTVs.slice(0,8).map(t=>`
+                  <div style="padding:10px;border-radius:10px;background:var(--surface-2);border:1px solid var(--line);display:flex;align-items:center;justify-content:space-between">
+                    <div><b style="font-size:12px">Room ${t.room}</b><div style="font-size:10px;color:var(--mut)">${t.cast?'Cast ready':'No cast'}</div></div>
+                    <button class="chip ${t.cast?'on':''}" data-cast-toggle="${t.room}" style="font-size:10px;padding:3px 8px">${t.cast?'On':'Off'}</button>
+                  </div>`).join('')}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="c-5 rise rise-1">
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-h"><div><div class="card-title">Wake-up alarm manager</div><div class="card-sub">TV-based alarm · guest sees sunrise animation</div></div>
+              <span class="tag tag-amber">${icon('clock')}${alarms.length} set</span></div>
+            <div class="card-body">
+              <div style="display:flex;gap:8px;margin-bottom:12px">
+                <select id="alarm-room" class="input" style="flex:1;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink)">
+                  ${TVS.filter(t=>t.st==='online').map(t=>`<option value="${t.room}">Room ${t.room}</option>`).join('')}
+                </select>
+                <input id="alarm-time" type="time" value="07:00" class="input" style="padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink)"/>
+                <button class="btn-gold" id="alarm-set">${icon('plus')}Set</button>
+              </div>
+              <div id="alarm-list">
+                ${alarms.map(t=>`
+                  <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:10px;background:var(--surface-2);margin-bottom:6px">
+                    <div style="display:flex;align-items:center;gap:8px"><span class="kpi-ic" style="width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:var(--gold-grad-soft);color:var(--gold-deep)">${icon('clock')}</span>
+                    <div><b style="font-size:12px">Room ${t.room}</b><small style="color:var(--mut);display:block">${t.alarm[0]} · ${t.alarm[1]}</small></div></div>
+                    <button class="icon-btn" data-alarm-del="${t.room}" style="color:var(--red)">${icon('x')}</button>
+                  </div>`).join('')||'<small style="color:var(--mut)">No alarms set.</small>'}
+              </div>
+            </div>
+          </div>
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-h"><div><div class="card-title">Accessibility</div><div class="card-sub">Per-room TV accessibility settings</div></div></div>
+            <div class="card-body" style="display:flex;flex-direction:column;gap:10px">
+              ${[['Closed captions','CC subtitles for all live channels','ccCaptions'],['Audio description','Narrated audio for visually impaired guests','audioDesc'],['High contrast','Bold text & high-contrast UI for readability','hiContrast'],['Large text','Increased font size for menus & guide','largeText'],['Voice guidance','Spoken menu navigation via remote','voiceNav']].map(([label,desc,key])=>`
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:8px 10px;border-radius:10px;background:var(--surface-2)">
+                  <input type="checkbox" data-acc="${key}" ${key==='ccCaptions'?'checked':''} style="width:16px;height:16px;accent-color:var(--gold)"/>
+                  <div style="flex:1"><b style="font-size:12px;display:block">${label}</b><small style="color:var(--mut)">${desc}</small></div>
+                </label>`).join('')}
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-h"><div><div class="card-title">Weather & info widget</div><div class="card-sub">Shown on TV home screen</div></div></div>
+            <div class="card-body">
+              <div style="border-radius:12px;padding:14px;background:linear-gradient(135deg,var(--surface-2),var(--surface-3));text-align:center">
+                <div style="font-size:11px;color:var(--mut);letter-spacing:.1em;text-transform:uppercase">Weather now</div>
+                <div style="font-size:28px;font-weight:700;font-family:var(--font-d);color:var(--gold-deep);margin:4px 0">${activeProperty().weather}</div>
+                <div style="display:flex;justify-content:center;gap:14px;margin-top:8px;font-size:11px;color:var(--mut)">
+                  <span>${icon('sun')}Sunset ${activeProperty().sunset}</span>
+                  <span>${icon('clock')}Check-out 12:00</span>
+                </div>
+              </div>
+              <small style="display:block;margin-top:8px;color:var(--mut);text-align:center">Widget auto-updates every 30 min on all in-room screens.</small>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    wireServices();
+  }
+  function wireServices(){
+    let orderTotal=0;
+    $$('[data-rs-add]').forEach(b=>b.onclick=()=>{
+      const name=b.dataset.rsAdd, price=+b.dataset.rsPrice;
+      orderTotal+=price;
+      toast('Added to room service order',`${name} · $${price} · total $${orderTotal}`);
+    });
+    $$('[data-cast-toggle]').forEach(b=>b.onclick=()=>{
+      const room=+b.dataset.castToggle;
+      const t=TVS.find(x=>x.room===room);
+      if(t){t.cast=!t.cast;toast(`Casting ${t.cast?'enabled':'disabled'}`,`Room ${room}`);renderServices();}
+    });
+    const alarmSet=$('#alarm-set');
+    if(alarmSet)alarmSet.onclick=()=>{
+      const room=+$('#alarm-room').value, time=$('#alarm-time').value;
+      const t=TVS.find(x=>x.room===room);
+      if(t){t.alarm=[time,'Tomorrow'];toast('Alarm set',`Room ${room} · ${time} · sunrise animation`);renderServices();}
+    };
+    $$('[data-alarm-del]').forEach(b=>b.onclick=()=>{
+      const room=+b.dataset.alarmDel;
+      const t=TVS.find(x=>x.room===room);
+      if(t){t.alarm=null;toast('Alarm removed',`Room ${room}`);renderServices();}
+    });
+    $$('[data-acc]').forEach(b=>b.onclick=()=>{
+      const key=b.dataset.acc;
+      toast('Accessibility',`${b.checked?'Enabled':'Disabled'}: ${key}`);
+    });
+  }
+
+  /* Tab switching */
+  $$('[data-tvtab]').forEach(b=>b.onclick=()=>renderTab(b.dataset.tvtab));
+  renderTab('rooms');
 };
 
 /* ============================================================
@@ -5613,7 +6403,7 @@ VIEWS.fb = () => {
       <div class="card">
         <div class="card-h"><div><div class="card-title">Top performers tonight</div><div class="card-sub">Kitchen course load · real-time</div></div></div>
         <div class="card-body">
-          ${[['Wagyu tenderloin · A5',42,'$6,720','92'],['Lobster thermidor',31,'$4,030','88'],['Chef’s 9-course omakase',26,'$9,360','76'],['1989 Springbank pairing',18,'$5,040','44'],['Tasting of tropical soufflé',36,'$1,080','98']].map((x,i)=>`
+          ${[['Wagyu tenderloin · A5',42,'£6,720','92'],['Lobster thermidor',31,'£4,030','88'],['Chef’s 9-course omakase',26,'£9,360','76'],['1989 Springbank pairing',18,'£5,040','44'],['Tasting of tropical soufflé',36,'£1,080','98']].map((x,i)=>`
           <div class="rc-row"><b class="num" style="width:22px;font-family:var(--font-d);color:var(--mut)">0${i+1}</b>
             <span style="font-size:12.5px;font-weight:600;flex:1">${x[0]}</span>
             <div class="rc-bar" style="max-width:180px"><i style="--w:${x[3]/100}"></i></div>
@@ -5629,17 +6419,17 @@ VIEWS.fb = () => {
         <div class="card-body">
           <div class="pay-row"><span class="pay-ic pi-card">CARD</span>
             <div class="lrow-main"><b>Cards · terminals + tokenized</b><small>312 transactions · 1.4% fee</small></div>
-            <b class="num">$48,920</b></div>
+            <b class="num">£48,920</b></div>
           <div class="pay-row"><span class="pay-ic pi-phonepe">Pe</span>
-            <div class="lrow-main"><b>PhonePe</b><small>41 transactions</small></div><b class="num">$10,480</b></div>
+            <div class="lrow-main"><b>PhonePe</b><small>41 transactions</small></div><b class="num">£10,480</b></div>
           <div class="pay-row"><span class="pay-ic pi-gpay">G</span>
-            <div class="lrow-main"><b>Google Pay</b><small>33 transactions</small></div><b class="num">$8,240</b></div>
+            <div class="lrow-main"><b>Google Pay</b><small>33 transactions</small></div><b class="num">£8,240</b></div>
           <div class="pay-row"><span class="pay-ic pi-upi">UPI</span>
-            <div class="lrow-main"><b>UPI · other rails</b><small>28 transactions</small></div><b class="num">$6,110</b></div>
-          <div class="pay-row"><span class="pay-ic pi-cash">$</span>
-            <div class="lrow-main"><b>Cash & room charge</b><small>Posted to folio</small></div><b class="num">$19,680</b></div>
+            <div class="lrow-main"><b>UPI · other rails</b><small>28 transactions</small></div><b class="num">£6,110</b></div>
+          <div class="pay-row"><span class="pay-ic pi-cash">£</span>
+            <div class="lrow-main"><b>Cash & room charge</b><small>Posted to folio</small></div><b class="num">£19,680</b></div>
           <div class="divider"></div>
-          <div style="display:flex;justify-content:space-between"><span class="muted" style="font-size:12px">Gross F&B revenue</span><b class="num" style="font-family:var(--font-d);font-size:18px">$93,430</b></div>
+          <div style="display:flex;justify-content:space-between"><span class="muted" style="font-size:12px">Gross F&B revenue</span><b class="num" style="font-family:var(--font-d);font-size:18px">£93,430</b></div>
         </div>
       </div>
       <div class="card">
@@ -5679,9 +6469,9 @@ VIEWS.revenue = () => {
   return `
   <div class="row">
     <div class="c-3 rise"><div class="card kpi-card"><div class="kpi-top"><span class="kpi-ic" style="background:var(--gold-grad-soft);color:var(--gold-deep)">${icon('dollar')}</span><span class="kpi-label">BAR tonight</span></div>
-      <div class="kpi-value"><span class="cur">$</span><span class="num">1,980</span></div><div class="kpi-foot"><span class="delta up">${icon('arrowUp')}8% rec.</span><span class="kpi-note">comp avg $2,360</span></div></div></div>
+      <div class="kpi-value"><span class="cur">£</span><span class="num">1,980</span></div><div class="kpi-foot"><span class="delta up">${icon('arrowUp')}8% rec.</span><span class="kpi-note">comp avg £2,360</span></div></div></div>
     <div class="c-3 rise rise-1"><div class="card kpi-card"><div class="kpi-top"><span class="kpi-ic" style="background:var(--emerald-soft);color:var(--emerald)">${icon('trend')}</span><span class="kpi-label">90-day pace</span></div>
-      <div class="kpi-value">+11.8%</div><div class="kpi-foot"><span class="delta up">${icon('arrowUp')}$89k</span><span class="kpi-note">vs same pickup LY</span></div></div></div>
+      <div class="kpi-value">+11.8%</div><div class="kpi-foot"><span class="delta up">${icon('arrowUp')}£89k</span><span class="kpi-note">vs same pickup LY</span></div></div></div>
     <div class="c-3 rise rise-2"><div class="card kpi-card"><div class="kpi-top"><span class="kpi-ic" style="background:var(--azure-soft);color:var(--azure)">${icon('activity')}</span><span class="kpi-label">7-day pickup</span></div>
       <div class="kpi-value">146 rms</div><div class="kpi-foot"><span class="delta up">${icon('arrowUp')}22%</span><span class="kpi-note">Regatta demand wave</span></div></div></div>
     <div class="c-3 rise rise-3"><div class="card kpi-card"><div class="kpi-top"><span class="kpi-ic" style="background:var(--crimson-soft);color:var(--crimson)">${icon('percent')}</span><span class="kpi-label">Cancel rate</span></div>
@@ -5717,9 +6507,9 @@ VIEWS.revenue = () => {
           </div>`).join('')}
           <div class="divider"></div>
           <div style="display:flex;justify-content:space-between;gap:14px;text-align:center">
-            <div><b class="num" style="font-family:var(--font-d);font-size:21px">$709k</b><div class="kpi-note">90-day room revenue</div></div>
-            <div><b class="num gold-text" style="font-family:var(--font-d);font-size:21px">44%</b><div class="kpi-note">Direct mix · saves $31k fees</div></div>
-            <div><b class="num" style="font-family:var(--font-d);font-size:21px">$1,295</b><div class="kpi-note">Blended RevPAR</div></div>
+            <div><b class="num" style="font-family:var(--font-d);font-size:21px">£709k</b><div class="kpi-note">90-day room revenue</div></div>
+            <div><b class="num gold-text" style="font-family:var(--font-d);font-size:21px">44%</b><div class="kpi-note">Direct mix · saves £31k fees</div></div>
+            <div><b class="num" style="font-family:var(--font-d);font-size:21px">£1,295</b><div class="kpi-note">Blended RevPAR</div></div>
           </div>
         </div>
       </div>
@@ -5731,23 +6521,23 @@ VIEWS.revenue = () => {
         <div class="card-body">
           <div class="ai-rec">
             <span class="air-ic">${icon('trend')}</span>
-            <div style="flex:1"><b style="font-size:12.8px">Raise BAR 18 Oct to $2,140</b>
-              <p style="font-size:11.5px;color:var(--mut);margin-top:3px">Regatta arrivals · comp set selling $2,360 · projected uplift <b style="color:var(--emerald)">+$18,400</b></p>
-              <div style="display:flex;gap:7px;margin-top:9px"><button class="btn-gold btn-sm" data-action="toast" data-t="Rate approved" data-s="BAR 18 Oct now $2,140 across channels">Approve</button>
+            <div style="flex:1"><b style="font-size:12.8px">Raise BAR 18 Oct to £2,140</b>
+              <p style="font-size:11.5px;color:var(--mut);margin-top:3px">Regatta arrivals · comp set selling £2,360 · projected uplift <b style="color:var(--emerald)">+£18,400</b></p>
+              <div style="display:flex;gap:7px;margin-top:9px"><button class="btn-gold btn-sm" data-action="toast" data-t="Rate approved" data-s="BAR 18 Oct now £2,140 across channels">Approve</button>
               <button class="btn-ghost btn-sm" data-action="toast" data-t="Simulation" data-s="Opening rate model">Simulate</button></div>
             </div>
           </div>
           <div class="ai-rec">
             <span class="air-ic">${icon('key')}</span>
             <div style="flex:1"><b style="font-size:12.8px">Open 3 overwater suites to waitlist</b>
-              <p style="font-size:11.5px;color:var(--mut);margin-top:3px">9 qualified waitlist requests; release at 1.2× rack · <b style="color:var(--emerald)">+$14,200</b></p>
+              <p style="font-size:11.5px;color:var(--mut);margin-top:3px">9 qualified waitlist requests; release at 1.2× rack · <b style="color:var(--emerald)">+£14,200</b></p>
               <div style="display:flex;gap:7px;margin-top:9px"><button class="btn-gold btn-sm" data-action="toast" data-t="Waitlist release armed" data-s="Offers go out at 16:00">Release</button></div>
             </div>
           </div>
           <div class="ai-rec">
             <span class="air-ic">${icon('spa')}</span>
             <div style="flex:1"><b style="font-size:12.8px">Bundle spa on low-demand Tuesdays</b>
-              <p style="font-size:11.5px;color:var(--mut);margin-top:3px">Wellness segment conversion +31% in A/B test · attach $280 credit.</p>
+              <p style="font-size:11.5px;color:var(--mut);margin-top:3px">Wellness segment conversion +31% in A/B test · attach £280 credit.</p>
               <div style="display:flex;gap:7px;margin-top:9px"><button class="btn-ghost btn-sm" data-action="toast" data-t="Bundle drafted" data-s="Sent to guest web + booking engine">Configure</button></div>
             </div>
           </div>
@@ -5965,7 +6755,7 @@ VIEWS.automations = () => `
       <div class="card">
         <div class="card-h"><div><div class="card-title">Automation impact</div><div class="card-sub">Last 30 days</div></div></div>
         <div class="card-body">
-          ${[['Staff hours returned','1,248 h','green'],['Manual charges automated','$1.84M','gold'],['Guest messages handled by Aves','71%','blue'],['Service recovery median','9 min','red']].map(x=>`
+          ${[['Staff hours returned','1,248 h','green'],['Manual charges automated','£1.84M','gold'],['Guest messages handled by Aves','71%','blue'],['Service recovery median','9 min','red']].map(x=>`
           <div class="dp-kv"><span>${x[0]}</span><b style="color:var(--${x[2]});font-family:var(--font-d);font-size:16px">${x[1]}</b></div>`).join('')}
         </div>
       </div>
@@ -6009,7 +6799,7 @@ VIEWS.reports = () => {
         <div class="card-h"><div><div class="card-title">Business intelligence snapshot</div><div class="card-sub">Consolidated KPI movement · trailing 30 days</div></div></div>
         <div class="card-body">
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:6px">
-            ${[['GOPPAR','$194','+8.4%','green',SPARKS.gop],['Labour ratio','28.6%','-1.8pt','green',SPARKS.occ],
+            ${[['GOPPAR','£194','+8.4%','green',SPARKS.gop],['Labour ratio','28.6%','-1.8pt','green',SPARKS.occ],
                ['F&B cost %','31.2%','-2.4pt','green',SPARKS.rev],['Spa attach','24%','+5.1%','green',SPARKS.adr]].map(k=>`
               <div style="padding:14px;border-radius:14px;border:1px solid var(--line);background:var(--surface-2)">
                 <small style="font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);font-weight:800">${k[0]}</small>
@@ -6085,14 +6875,14 @@ VIEWS.settings = () => `
             <div class="field"><label>Property name</label><input value="Aurelia Royal Sands"/></div>
             <div class="field"><label>Location</label><input value="Baa Atoll, Maldives"/></div>
             <div class="field"><label>Total keys</label><input value="342"/></div>
-            <div class="field"><label>Currency</label><select><option>USD — US Dollar</option><option>EUR — Euro</option><option>MVR — Maldivian Rufiyaa</option></select></div>
+            <div class="field"><label>Currency</label><select><option>GBP — British Pound</option><option>USD — US Dollar</option><option>EUR — Euro</option><option>MVR — Maldivian Rufiyaa</option></select></div>
             <div class="field"><label>Timezone</label><select><option>Indian / Malé (GMT+5)</option></select></div>
             <div class="field"><label>Default language</label><select><option>English</option><option>Français</option><option>日本語</option><option>中文</option></select></div>
           </div>
         </div>
       </div>
       <div class="card" style="margin-bottom:14px">
-        <div class="card-h"><div><div class="card-title">Appearance</div><div class="card-sub">Two signature moods · your choice is remembered on this device</div></div></div>
+        <div class="card-h"><div><div class="card-title">Appearance</div><div class="card-sub">Three signature styles · light & dark moods · remembered on this device</div></div></div>
         <div class="card-body">
           <label class="field" style="margin:0 0 14px"><label>Theme style</label></label>
           <div style="display:flex;gap:12px;margin-bottom:18px">
@@ -6102,6 +6892,9 @@ VIEWS.settings = () => `
             <button class="seg-card" data-mode-btn="modern" style="flex:1;text-align:left;display:flex;gap:12px;align-items:center">
               <span style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#7C5CFC 0%,#FF8FA3 55%,#FFB37A 100%);border:1px solid var(--line-2)"></span>
               <span><b style="font-size:13px;display:block">Modern</b><small style="color:var(--mut)">Aurora · pastel & vibrant</small></span></button>
+            <button class="seg-card" data-mode-btn="ultra" style="flex:1;text-align:left;display:flex;gap:12px;align-items:center">
+              <span style="width:40px;height:40px;border-radius:12px;background:radial-gradient(130% 130% at 82% 0%,#C0B4FE 0%,#8E7AF2 38%,#17171E 78%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.16),0 6px 16px -8px rgba(157,140,245,.55)"></span>
+              <span><b style="font-size:13px;display:block">Ultra</b><small style="color:var(--mut)">Liquid glass · lavender aurora</small></span></button>
           </div>
           <label class="field" style="margin:0 0 10px"><label>Mood</label></label>
           <div style="display:flex;gap:12px;margin-bottom:18px">
@@ -6229,7 +7022,7 @@ function openReservationModal(){
       </div>
       <div class="field"><label>Notes</label><textarea rows="2" placeholder="Aves will detect celebrations, allergies & preferences…"></textarea></div>
       <div class="ai-rec" style="margin:6px 0 0"><span class="air-ic">${icon('sparkles')}</span>
-        <div><b style="font-size:12.5px">Aves suggests</b><p style="font-size:11.5px;color:var(--mut);margin-top:2px">BAR $1,980 · prepay & save 6% · guest matching a returning Noir profile (82%).</p></div></div>
+        <div><b style="font-size:12.5px">Aves suggests</b><p style="font-size:11.5px;color:var(--mut);margin-top:2px">BAR £1,980 · prepay & save 6% · guest matching a returning Noir profile (82%).</p></div></div>
       <div class="modal-foot" style="margin-top:16px">
         <button type="button" class="btn-ghost" data-close>Cancel</button>
         <button type="submit" class="btn-gold">${icon('check')}Create & send confirmation</button>
@@ -6314,7 +7107,7 @@ function openAIDrawer(){
   const respond=q=>{
     const reply=/risk/i.test(q)?'Two risks: Kiosk 2 needs passport-scan assistance (queue under 3 min), and Pavilion 401 thermostats are offline before a 16:00 return. Engineering is en route.'
       :/arrival|brief/i.test(q)?'Arrivals briefing: 42 expected, 31 already checked in. Six Noir guests include Isabella Moreau (anniversary) and Sofia Rinaldi (honeymoon). Two late check-outs compete with three early arrivals — I recommend turning Suites 405 and 410 first.'
-      :/earn|revenue|more/i.test(q)?'Three moves tonight: approve +8% BAR on 18 Oct (+$18.4k), release 3 overwater suites to the waitlist (+$14.2k), and send pool upgrades to 14 eligible arrivals (+$12.4k modelled).'
+      :/earn|revenue|more/i.test(q)?'Three moves tonight: approve +8% BAR on 18 Oct (+£18.4k), release 3 overwater suites to the waitlist (+£14.2k), and send pool upgrades to 14 eligible arrivals (+£12.4k modelled).'
       :/unhappy|sad|complaint/i.test(q)?'No unresolved detractors right now. Two soft signals: Room 210 wanted a printed folio (done), and one guest flagged wait-time at L’Or Bleu — host is compressing the bar course.'
       :/occupancy|housekeep/i.test(q)?'86 of 100 service tasks are complete; the at-risk zone is Floor 3 (Room 312 priority turn). I reassigned Lauren to support Priya — projected SLA restored by 15:10.'
       :'Noted — I have that in context. I can draft the message, model the rate, or open the relevant ledger. Shall I proceed with my recommended action?';
@@ -6364,6 +7157,19 @@ document.addEventListener('click',e=>{
   const viewLink=e.target.closest('[data-view]');
   if(viewLink){go(viewLink.dataset.view);$('#app').classList.remove('menu-open');closeOverlays();return;}
 
+  const grp=e.target.closest('[data-toggle-group]');
+  if(grp){
+    const label=grp.dataset.toggleGroup;
+    if(SB_COLLAPSED.has(label))SB_COLLAPSED.delete(label);else SB_COLLAPSED.add(label);
+    const group=grp.closest('.nav-group');
+    if(group){
+      group.classList.toggle('collapsed');
+      const caret=grp.querySelector('.nav-group-caret');
+      if(caret)caret.style.transform=SB_COLLAPSED.has(label)?'rotate(-90deg)':'';
+    }
+    return;
+  }
+
   const sw=e.target.closest('[data-switch]');
   if(sw){sw.classList.toggle('on');toast('Preference updated',sw.classList.contains('on')?'Enabled across the property':'Disabled','gold');return;}
 
@@ -6388,7 +7194,7 @@ document.addEventListener('click',e=>{
   if(themeBtn){setTheme(themeBtn.dataset.theme);toast('Mood set',themeBtn.dataset.theme==='dark'?'Nuit · midnight & gold':'Maison · platinum & gold','gold');return;}
 
   const modeBtn=e.target.closest('[data-mode-btn]');
-  if(modeBtn){setMode(modeBtn.dataset.modeBtn);toast('Theme style',modeBtn.dataset.modeBtn==='modern'?'Modern · aurora & color':'Classic · platinum & gold','gold');return;}
+  if(modeBtn){const names={classic:'Classic · platinum & gold',modern:'Modern · aurora & color',ultra:'Ultra · liquid glass'};setMode(modeBtn.dataset.modeBtn);toast('Theme style',names[modeBtn.dataset.modeBtn]||'Theme updated','gold');return;}
 
   const bid=e.target.closest('[data-bid]');
   if(bid && S.view==='reservations'){

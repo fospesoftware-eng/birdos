@@ -210,8 +210,16 @@ h1,h2,h3,h4{font-weight:400}
 .nav-group{margin-top:16px}
 .nav-group-label{
   font-size:9.5px;letter-spacing:.26em;text-transform:uppercase;color:var(--faint);font-weight:700;
-  padding:0 12px 8px;white-space:nowrap;
+  padding:0 12px 8px;white-space:nowrap;cursor:pointer;user-select:none;
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  transition:color .25s;
 }
+.nav-group-label:hover{color:var(--ink-2)}
+.nav-group-caret{display:inline-flex;transition:transform .3s ease;color:var(--faint)}
+.nav-group-caret svg{width:12px;height:12px;stroke:currentColor}
+.nav-group.collapsed .nav-group-caret{transform:rotate(-90deg)}
+.nav-group-items{overflow:hidden;transition:max-height .35s ease,opacity .25s ease;max-height:2000px;opacity:1}
+.nav-group.collapsed .nav-group-items{max-height:0;opacity:0;margin:0}
 .nav-item{
   display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;margin:2px 0;
   color:var(--ink-2);font-size:13.5px;font-weight:600;position:relative;white-space:nowrap;
@@ -1397,4 +1405,267 @@ html[data-mode="modern"] .tl-now{background:var(--gold-grad)}
 /* --- Brand mark pulse animation stays, recolor --- */
 html[data-mode="modern"] .brand-mark{animation:none}
 html[data-mode="modern"] .brand-mark::before{display:none}
+
+/* ============================================================
+   ULTRA THEME — "Liquid Glass" · FINANCIA-inspired aurora glass
+   Dark: near-black canvas (#121217) + lavender light pooling in
+   card corners (#C0B4FE), frosted glass surfaces with hairline
+   white borders. Light: frosted porcelain + lilac mist auroras.
+   Accent: lavender. Method: static radial-gradient blooms
+   (paint-once) + backdrop blur. Fully isolated [data-mode="ultra"].
+   ============================================================ */
+html[data-mode="ultra"]{
+  --bg-0:#ECEAF6;
+  --bg-1:#F3F2FA;
+  --bg-2:#FFFFFF;
+  --ink:#1A1826;
+  --ink-2:#3E3B52;
+  --mut:#6E6A85;
+  --faint:#9B97B0;
+  --surface:rgba(255,255,255,.66);
+  --surface-2:rgba(124,110,200,.08);
+  --surface-solid:#FFFFFF;
+  --elev:#FFFFFF;
+  --line:rgba(26,24,38,.10);
+  --line-2:rgba(26,24,38,.18);
+  --line-inv:rgba(255,255,255,.55);
+  --hi:rgba(255,255,255,.90);
+
+  --glass:linear-gradient(165deg,rgba(255,255,255,.86),rgba(255,255,255,.60));
+  --glass-brd:rgba(255,255,255,.78);
+  --bloom:radial-gradient(420px 260px at 88% -14%,rgba(139,123,234,.11),transparent 62%),radial-gradient(340px 220px at -10% 114%,rgba(139,123,234,.07),transparent 58%);
+
+  --gold:#6D5BD0;            /* deep lavender accent (light) */
+  --gold-deep:#5A48C0;
+  --gold-2:#8B7BEA;
+  --gold-3:#E9E5FB;
+  --gold-grad:linear-gradient(135deg,#9D8CF5 0%,#6D5BD0 100%);
+  --gold-grad-soft:rgba(139,123,234,.12);
+
+  --emerald:#0E9F6E;--emerald-2:#047857;--emerald-soft:rgba(14,159,110,.10);
+  --crimson:#E11D48;--crimson-soft:rgba(225,29,72,.09);
+  --amber:#D97706;--amber-soft:rgba(217,119,6,.10);
+  --azure:#2563EB;--azure-soft:rgba(37,99,235,.09);
+  --violet:#7C3AED;--violet-soft:rgba(124,58,237,.09);
+  --danger:#DC2626;
+
+  --radius:18px;
+  --radius-sm:12px;
+  --font:"Inter",-apple-system,BlinkMacSystemFont,sans-serif;
+  --font-d:"Inter","SF Pro Display",-apple-system,BlinkMacSystemFont,sans-serif;
+  --shadow-sm:0 1px 2px rgba(26,24,38,.05),0 8px 24px -18px rgba(76,60,160,.25);
+  --shadow:0 24px 50px -30px rgba(58,44,130,.35);
+  --shadow-gold:0 12px 28px -12px rgba(139,123,234,.55);
+}
+html[data-mode="ultra"][data-theme="dark"]{
+  --bg-0:#0D0D11;
+  --bg-1:#121217;
+  --bg-2:#1B1B22;
+  --ink:#F2F1FA;
+  --ink-2:#B9B6CC;
+  --mut:#8B88A3;
+  --faint:#5F5C74;
+  --surface:rgba(255,255,255,.05);
+  --surface-2:rgba(255,255,255,.07);
+  --surface-solid:#17171E;
+  --elev:#1E1E27;
+  --line:rgba(255,255,255,.08);
+  --line-2:rgba(255,255,255,.16);
+  --line-inv:rgba(0,0,0,.40);
+  --hi:rgba(255,255,255,.10);
+
+  --glass:linear-gradient(165deg,rgba(255,255,255,.065),rgba(255,255,255,.028) 55%,rgba(255,255,255,.045));
+  --glass-brd:rgba(255,255,255,.09);
+  --bloom:radial-gradient(420px 260px at 88% -14%,rgba(192,180,254,.17),transparent 62%),radial-gradient(340px 220px at -10% 114%,rgba(157,140,245,.11),transparent 58%);
+
+  --gold:#C0B4FE;            /* primary lavender (dark) */
+  --gold-deep:#D7CDFF;
+  --gold-2:#9D8CF5;
+  --gold-3:#26223B;
+  --gold-grad:linear-gradient(135deg,#D9CFFF 0%,#A492F9 55%,#8E7AF2 100%);
+  --gold-grad-soft:rgba(192,180,254,.14);
+
+  --emerald:#4ADE80;--emerald-2:#10B981;--emerald-soft:rgba(74,222,128,.13);
+  --crimson:#FB7185;--crimson-soft:rgba(251,113,133,.13);
+  --amber:#FBBF24;--amber-soft:rgba(251,191,36,.13);
+  --azure:#8FA8FF;--azure-soft:rgba(143,168,255,.14);
+  --violet:#B49CFF;--violet-soft:rgba(180,156,255,.13);
+
+  --shadow-sm:0 1px 0 rgba(0,0,0,.40),0 10px 30px -22px rgba(0,0,0,.70);
+  --shadow:0 30px 60px -34px rgba(0,0,0,.85);
+  --shadow-gold:0 14px 34px -14px rgba(157,140,245,.50);
+}
+
+/* --- Aurora canvas: static lavender light pools on near-black / porcelain (paint-once) --- */
+html[data-mode="ultra"] body{
+  background:
+    radial-gradient(1100px 700px at 82% -12%,rgba(139,123,234,.16),transparent 62%),
+    radial-gradient(900px 620px at -12% 108%,rgba(139,123,234,.12),transparent 58%),
+    radial-gradient(760px 520px at 55% 118%,rgba(109,91,208,.08),transparent 60%),
+    var(--bg-1);
+}
+html[data-mode="ultra"][data-theme="dark"] body{
+  background:
+    radial-gradient(1100px 700px at 82% -12%,rgba(157,140,245,.14),transparent 62%),
+    radial-gradient(900px 620px at -12% 108%,rgba(124,98,226,.11),transparent 58%),
+    radial-gradient(760px 520px at 55% 118%,rgba(64,52,120,.16),transparent 60%),
+    var(--bg-1);
+}
+html[data-mode="ultra"] body::before,html[data-mode="ultra"] body::after{display:none}
+html[data-mode="ultra"] ::selection{background:#C0B4FE;color:#17131F}
+html[data-mode="ultra"] *::-webkit-scrollbar-thumb{background-image:none;background-color:rgba(139,123,234,.30);border-radius:999px}
+html[data-mode="ultra"][data-theme="dark"] *::-webkit-scrollbar-thumb{background-color:rgba(192,180,254,.24)}
+html[data-mode="ultra"] *::-webkit-scrollbar-track{background:transparent}
+
+/* --- Cards: frosted glass with liquid light pooling in the corners --- */
+html[data-mode="ultra"] .card{
+  position:relative;
+  background:var(--glass);
+  border:1px solid var(--glass-brd);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow-sm);
+  backdrop-filter:blur(22px) saturate(150%);
+  -webkit-backdrop-filter:blur(22px) saturate(150%);
+}
+html[data-mode="ultra"] .card::before{display:none}
+html[data-mode="ultra"] .card::after{
+  content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:var(--bloom);
+}
+html[data-mode="ultra"] .card.hover:hover{
+  transform:translateY(-1px);
+  box-shadow:var(--shadow),0 0 0 1px rgba(139,123,234,.22),0 18px 44px -22px rgba(139,123,234,.35);
+}
+html[data-mode="ultra"][data-theme="dark"] .card.hover:hover{box-shadow:var(--shadow),0 0 0 1px rgba(192,180,254,.22),0 18px 44px -22px rgba(157,140,245,.30)}
+html[data-mode="ultra"] .card-h{position:relative;border-bottom:1px solid var(--line)}
+html[data-mode="ultra"] .card-h::after{display:none}
+html[data-mode="ultra"] .card-title{font-family:var(--font-d);font-weight:700;font-size:15.5px;letter-spacing:-.01em}
+html[data-mode="ultra"] .card-sub{font-size:11.5px;letter-spacing:.01em}
+html[data-mode="ultra"] .card-body{padding:18px}
+html[data-mode="ultra"] .card-foot{color:var(--gold)}
+html[data-mode="ultra"] .card-foot:hover{background:var(--gold-grad-soft)}
+
+/* --- KPI: luminous lavender instrument tiles --- */
+html[data-mode="ultra"] .kpi-card{border-radius:var(--radius)}
+html[data-mode="ultra"] .kpi-card::before{display:none}
+html[data-mode="ultra"] .kpi-ic{
+  border-radius:12px;background:var(--gold-grad)!important;color:#fff!important;border:none;
+  box-shadow:0 10px 22px -10px rgba(139,123,234,.60),inset 0 1px 0 rgba(255,255,255,.45);
+}
+html[data-mode="ultra"][data-theme="dark"] .kpi-ic{color:#1E1938!important;box-shadow:0 10px 24px -10px rgba(157,140,245,.55),inset 0 1px 0 rgba(255,255,255,.55)}
+html[data-mode="ultra"] .kpi-value{font-family:var(--font-d);font-weight:800;letter-spacing:-.03em}
+html[data-mode="ultra"] .delta{font-weight:700;border-radius:999px}
+
+/* --- Sidebar: floating glass rail --- */
+html[data-mode="ultra"] .sidebar{
+  background:linear-gradient(180deg,rgba(255,255,255,.72),rgba(255,255,255,.55));
+  border-right:1px solid rgba(255,255,255,.70);
+  backdrop-filter:blur(24px) saturate(160%);
+  -webkit-backdrop-filter:blur(24px) saturate(160%);
+}
+html[data-mode="ultra"][data-theme="dark"] .sidebar{
+  background:linear-gradient(180deg,rgba(18,18,24,.72),rgba(18,18,24,.55));
+  border-right-color:rgba(255,255,255,.07);
+}
+html[data-mode="ultra"] .brand-mark{
+  background:var(--gold-grad);border:none;border-radius:12px;animation:none;
+  box-shadow:0 10px 24px -10px rgba(139,123,234,.60),inset 0 1px 0 rgba(255,255,255,.45);
+}
+html[data-mode="ultra"] .brand-mark::before,html[data-mode="ultra"] .brand-mark::after{display:none}
+html[data-mode="ultra"] .brand-mark svg path,html[data-mode="ultra"] .brand-mark svg circle{fill:#fff}
+html[data-mode="ultra"][data-theme="dark"] .brand-mark svg path,html[data-mode="ultra"][data-theme="dark"] .brand-mark svg circle{fill:#1E1938}
+html[data-mode="ultra"] .brand-name b{color:var(--gold)}
+html[data-mode="ultra"] .nav-item{border-radius:12px;margin:2px 0;font-weight:600}
+html[data-mode="ultra"] .nav-item:hover{background:var(--surface-2);transform:none}
+html[data-mode="ultra"] .nav-item.on{
+  background:linear-gradient(135deg,rgba(139,123,234,.16),rgba(109,91,208,.10));
+  color:#5A48C0;
+  box-shadow:inset 0 0 0 1px rgba(109,91,208,.22),0 8px 22px -14px rgba(139,123,234,.50);
+}
+html[data-mode="ultra"] .nav-item.on::after{display:none}
+html[data-mode="ultra"] .nav-item.on .nav-badge{background:var(--gold-grad);color:#fff}
+html[data-mode="ultra"][data-theme="dark"] .nav-item.on{
+  background:linear-gradient(135deg,rgba(192,180,254,.16),rgba(157,140,245,.08));
+  color:#DAD2FF;
+  box-shadow:inset 0 0 0 1px rgba(192,180,254,.24),0 10px 24px -14px rgba(157,140,245,.45);
+}
+
+/* --- Topbar: floating glass bar --- */
+html[data-mode="ultra"] #topbar{
+  background:rgba(255,255,255,.60);
+  border-bottom:1px solid rgba(255,255,255,.70);
+  backdrop-filter:blur(24px) saturate(160%);
+  -webkit-backdrop-filter:blur(24px) saturate(160%);
+  box-shadow:0 12px 34px -28px rgba(58,44,130,.40);
+}
+html[data-mode="ultra"][data-theme="dark"] #topbar{
+  background:rgba(15,15,20,.60);
+  border-bottom-color:rgba(255,255,255,.07);
+  box-shadow:0 14px 40px -30px rgba(0,0,0,.80);
+}
+html[data-mode="ultra"] .tb-title{font-family:var(--font-d);font-weight:700;letter-spacing:-.01em}
+html[data-mode="ultra"] .tb-search{border-radius:999px;background:var(--surface);border:1px solid var(--line-2);backdrop-filter:blur(10px)}
+
+/* --- Buttons: luminous lavender glass --- */
+html[data-mode="ultra"] .btn-gold,html[data-mode="ultra"] .btn-primary{
+  background:var(--gold-grad);color:#fff;border:none;border-radius:999px;font-weight:700;
+  box-shadow:0 12px 30px -12px rgba(139,123,234,.60),inset 0 1px 0 rgba(255,255,255,.35);
+}
+html[data-mode="ultra"][data-theme="dark"] .btn-gold,html[data-mode="ultra"][data-theme="dark"] .btn-primary{
+  color:#1E1938;
+  box-shadow:0 14px 34px -12px rgba(157,140,245,.55),inset 0 1px 0 rgba(255,255,255,.55);
+}
+html[data-mode="ultra"] .btn-gold:hover,html[data-mode="ultra"] .btn-primary:hover{filter:brightness(1.06)}
+html[data-mode="ultra"] .btn-gold:active,html[data-mode="ultra"] .btn-primary:active{transform:translateY(1px);box-shadow:0 6px 16px -10px rgba(139,123,234,.55)}
+html[data-mode="ultra"] .btn-ghost{border-radius:999px;border:1px solid var(--line-2);background:var(--surface);backdrop-filter:blur(10px)}
+html[data-mode="ultra"] .btn-ghost:hover{border-color:var(--gold);color:var(--gold);background:var(--gold-grad-soft)}
+html[data-mode="ultra"] .icon-btn{border-radius:12px}
+html[data-mode="ultra"] .icon-btn:hover{background:var(--surface-2);color:var(--gold);border-color:transparent}
+
+/* --- Tags: glass pills --- */
+html[data-mode="ultra"] .tag{border-radius:999px;font-weight:600;letter-spacing:.01em}
+html[data-mode="ultra"] .tag[class*="tag-"]{background:rgba(255,255,255,.05)!important;border:1px solid currentColor!important;backdrop-filter:blur(6px)}
+html[data-mode="ultra"] .tag-gold{background:var(--gold-grad-soft)!important;border-color:var(--gold)!important;color:var(--gold)!important}
+html[data-mode="ultra"] .chip{border-radius:999px;font-weight:600}
+html[data-mode="ultra"] .chip.on{background:var(--gold-grad);color:#fff;border-color:transparent;box-shadow:0 8px 18px -10px rgba(139,123,234,.55)}
+html[data-mode="ultra"][data-theme="dark"] .chip.on{color:#1E1938;box-shadow:0 8px 20px -10px rgba(157,140,245,.50)}
+
+/* --- Fields: glass inputs · lavender focus ring --- */
+html[data-mode="ultra"] .field input,html[data-mode="ultra"] .field select,html[data-mode="ultra"] .field textarea{
+  background:var(--surface);border:1px solid var(--line-2);border-radius:var(--radius-sm);backdrop-filter:blur(10px);
+}
+html[data-mode="ultra"] .field input:focus,html[data-mode="ultra"] .field select:focus,html[data-mode="ultra"] .field textarea:focus{
+  border-color:var(--gold);
+  box-shadow:0 0 0 3px var(--gold-grad-soft),0 8px 20px -14px rgba(139,123,234,.45);
+}
+html[data-mode="ultra"] .switch.on{background:var(--gold-grad)}
+
+/* --- Tables: floating glass rows --- */
+html[data-mode="ultra"] table th{font-weight:700;letter-spacing:.10em;text-transform:uppercase;font-size:9.5px;color:var(--mut);border-bottom:1px solid var(--line-2)}
+html[data-mode="ultra"] tbody tr:hover{background:var(--gold-grad-soft);box-shadow:none}
+
+/* --- Segmented selector: glass tiles · lavender confirmed --- */
+html[data-mode="ultra"] .seg-card{border-radius:14px;border:1px solid var(--line);background:var(--surface);backdrop-filter:blur(10px);transition:border-color .2s,background .2s,box-shadow .2s}
+html[data-mode="ultra"] .seg-card:hover{border-color:var(--gold)}
+html[data-mode="ultra"] .seg-card.on{
+  border-color:transparent;background:var(--gold-grad-soft);
+  box-shadow:inset 0 0 0 1.5px var(--gold),0 10px 26px -16px rgba(139,123,234,.55);
+}
+html[data-mode="ultra"][data-theme="dark"] .seg-card.on{background:rgba(192,180,254,.10);box-shadow:inset 0 0 0 1.5px var(--gold),0 12px 28px -16px rgba(157,140,245,.45)}
+
+/* --- Pulse strip: glass ticker --- */
+html[data-mode="ultra"] .pulse{
+  background:rgba(255,255,255,.55);border-bottom:1px solid rgba(255,255,255,.60);
+  backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%);
+}
+html[data-mode="ultra"][data-theme="dark"] .pulse{background:rgba(15,15,20,.55);border-bottom-color:rgba(255,255,255,.06)}
+html[data-mode="ultra"] .pulse-item{border-radius:999px}
+
+/* --- Charts & timeline: lavender light strokes --- */
+html[data-mode="ultra"] .area-line{stroke:var(--gold)}
+html[data-mode="ultra"] .area-dot{stroke:var(--gold)}
+html[data-mode="ultra"] .tl-floor-label{color:var(--gold)}
+html[data-mode="ultra"] .tl-day.today{background:var(--gold-grad-soft)}
+html[data-mode="ultra"] .tl-day.today b{color:var(--gold)}
+html[data-mode="ultra"] .tl-now{background:var(--gold-grad)}
 
