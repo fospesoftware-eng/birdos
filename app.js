@@ -1640,10 +1640,11 @@ const HK3D=(()=>{
     cancelAnimationFrame(rt.raf);
     clearTimeout(rt.autoT);
     rt.ro&&rt.ro.disconnect();
+    try{const gl=rt.renderer.getContext();if(gl&&gl.getExtension('WEBGL_lose_context'))gl.getExtension('WEBGL_lose_context').loseContext();}catch(e){}
     rt.scene.traverse(o=>{ if(o.geometry)o.geometry.dispose();
       if(o.material)(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.dispose()); });
     rt.renderer.dispose();
-    rt.renderer.domElement.remove();
+    if(rt.renderer.domElement&&rt.renderer.domElement.parentNode)rt.renderer.domElement.parentNode.removeChild(rt.renderer.domElement);
     window.__hk3d=null; rt=null;
   }
 
@@ -3368,6 +3369,10 @@ const ROOM3D=(()=>{
   /* ---------- main engine ---------- */
   function create(stage){
     const T=window.THREE;
+    // clear stale canvas + WebGL context from previous engine
+    const oc=stage.querySelector('canvas');
+    if(oc){try{const gl=oc.getContext('webgl2')||oc.getContext('webgl');if(gl&&gl.getExtension('WEBGL_lose_context'))gl.getExtension('WEBGL_lose_context').loseContext();}catch(e){}oc.remove();}
+    stage.innerHTML='';
     const scene=new T.Scene();
     scene.background=null;
     scene.fog=new T.Fog(0xE9EDF2,12,28);
@@ -3538,8 +3543,9 @@ const ROOM3D=(()=>{
   function destroy(){
     if(!rt)return;
     cancelAnimationFrame(rt.raf); clearTimeout(rt.autoT); rt.ro&&rt.ro.disconnect();
+    try{const gl=rt.renderer.getContext();if(gl&&gl.getExtension('WEBGL_lose_context'))gl.getExtension('WEBGL_lose_context').loseContext();}catch(e){}
     rt.scene.traverse(o=>{ if(o.geometry)o.geometry.dispose(); if(o.material)(Array.isArray(o.material)?o.material:[o.material]).forEach(mm=>{ if(mm.map)mm.map.dispose(); mm.dispose(); }); });
-    rt.renderer.dispose(); rt.renderer.domElement.remove(); rt=null;
+    rt.renderer.dispose(); if(rt.renderer.domElement&&rt.renderer.domElement.parentNode)rt.renderer.domElement.parentNode.removeChild(rt.renderer.domElement); rt=null;
   }
   function setType(t){ if(rt){ rt.curType=t; rt.setRoom(t); } }
   function setView(azDeg,phDeg){ if(!rt)return; rt.camT.th=azDeg*Math.PI/180; rt.camT.ph=Math.max(.12,Math.min(1.55,phDeg*Math.PI/180)); rt.auto=false; clearTimeout(rt.autoT); rt.autoT=setTimeout(()=>{ if(rt)rt.auto=true; },8000); }
@@ -3658,21 +3664,34 @@ const FAC3D=(()=>{
   /* facility prop builders */
   function buildPool(T,m){
     const g=new T.Group();
+    // stone pool deck with tiled texture
     const deck=new T.Mesh(new T.BoxGeometry(5.6,.14,3.6),m.stone);deck.position.y=.07;deck.receiveShadow=true;deck.castShadow=true;g.add(deck);
-    const poolBasin=new T.Mesh(new T.BoxGeometry(4.6,.35,2.6),new T.MeshStandardMaterial({color:0x1B5F82,roughness:.3}));poolBasin.position.y=.06;g.add(poolBasin);
-    const water=new T.Mesh(new T.PlaneGeometry(4.5,2.5),m.water);water.rotation.x=-Math.PI/2;water.position.y=.22;water.receiveShadow=true;g.add(water);
-    // tiled edge
-    const edgeMat=new T.MeshStandardMaterial({color:0xE8E2D4,roughness:.5});
+    // pool basin with depth
+    const poolBasin=new T.Mesh(new T.BoxGeometry(4.6,.5,2.6),new T.MeshStandardMaterial({color:0x1B4F72,roughness:.2,envMapIntensity:.5}));poolBasin.position.y=.05;g.add(poolBasin);
+    // pool wall tiles (light blue ceramic)
+    const tileMat=new T.MeshStandardMaterial({color:0x5DADE2,roughness:.15,envMapIntensity:.8});
+    const floorTile=new T.Mesh(new T.PlaneGeometry(4.4,2.4),tileMat);floorTile.rotation.x=-Math.PI/2;floorTile.position.y=-.18;g.add(floorTile);
+    // animated water surface — high transmission for realistic see-through
+    const waterMat=new T.MeshPhysicalMaterial({color:0x1A8AB5,roughness:.03,metalness:.0,transmission:.72,transparent:true,opacity:.7,ior:1.33,clearcoat:1,clearcoatRoughness:.02,envMapIntensity:1.6});
+    const water=new T.Mesh(new T.PlaneGeometry(4.5,2.5),waterMat);water.rotation.x=-Math.PI/2;water.position.y=.22;water.receiveShadow=true;g.add(water);g.userData.water=water;
+    // tiled pool edge
+    const edgeMat=new T.MeshStandardMaterial({color:0xE8E2D4,roughness:.4,envMapIntensity:.5});
     const tile=(x,z,w,d)=>{const t=new T.Mesh(new T.BoxGeometry(w,.06,d),edgeMat);t.position.set(x,.14,z);t.receiveShadow=true;g.add(t);};
-    for(let i=-1;i<=1;i++){const l=new T.Mesh(new T.BoxGeometry(.55,.08,1.9),m.white);l.position.set(-1.4+i*1.4,.18,-1.0);l.castShadow=true;g.add(l);
-      const c=new T.Mesh(new T.CylinderGeometry(.28,.32,.5,14),m.fabric);c.position.set(-1.4+i*1.4,.43,-1.0);c.castShadow=true;g.add(c);}
+    // sun loungers with fabric cushions
+    for(let i=-1;i<=1;i++){
+      const lrBase=new T.Mesh(new T.BoxGeometry(.55,.1,1.9),m.white);lrBase.position.set(-1.4+i*1.4,.18,-1.0);lrBase.castShadow=true;g.add(lrBase);
+      const lrLeg=(lx,lz)=>{const lg=new T.Mesh(new T.CylinderGeometry(.03,.03,.16,6),m.metal);lg.position.set(-1.4+i*1.4+lx,.07,-1.0+lz);g.add(lg);};
+      lrLeg(-.2,-.8);lrLeg(.2,-.8);lrLeg(-.2,.8);lrLeg(.2,.8);
+      const cushion=new T.Mesh(new T.BoxGeometry(.5,.08,1.8),m.fabric);cushion.position.set(-1.4+i*1.4,.26,-1.0);cushion.castShadow=true;g.add(cushion);
+    }
+    // pool bar
     const bar=new T.Mesh(new T.BoxGeometry(.4,.7,1.6),m.stone);bar.position.set(2.1,.35,-.6);bar.castShadow=true;g.add(bar);
-    const barTop=new T.Mesh(new T.BoxGeometry(.5,.06,1.7),m.stone);barTop.position.set(2.1,.7,-.6);g.add(barTop);
+    const barTop=new T.Mesh(new T.BoxGeometry(.5,.06,1.7),m.stone);barTop.position.set(2.1,.7,-.6);barTop.receiveShadow=true;g.add(barTop);
     const stool=new T.Mesh(new T.CylinderGeometry(.16,.18,.5,14),m.metal);stool.position.set(1.8,.25,-.6);stool.castShadow=true;g.add(stool);
-    // tensile shade canopy
-    const canopyMat=new T.MeshStandardMaterial({color:0xF4F1EB,roughness:.6,side:T.DoubleSide});
-    for(let i=-1;i<=1;i++){const pole=new T.Mesh(new T.CylinderGeometry(.03,.03,2.4,8),m.metal);pole.position.set(i*1.8,1.2,1.3);pole.castShadow=true;g.add(pole);}
-    const canopy=new T.Mesh(new T.PlaneGeometry(5.2,3.0),canopyMat);canopy.rotation.x=-Math.PI/2;canopy.position.y=2.3,0;canopy.rotation.z=.04;g.add(canopy);
+    // tensile shade canopy — properly positioned
+    const canopyMat=new T.MeshStandardMaterial({color:0xF4F1EB,roughness:.5,side:T.DoubleSide,envMapIntensity:.4});
+    for(let i=-1;i<=1;i++){const pole=new T.Mesh(new T.CylinderGeometry(.03,.03,2.6,8),m.metal);pole.position.set(i*1.8,1.3,1.3);pole.castShadow=true;g.add(pole);}
+    const canopy=new T.Mesh(new T.PlaneGeometry(5.2,3.0),canopyMat);canopy.rotation.x=-Math.PI/2;canopy.position.y=2.4;canopy.position.z=0;canopy.rotation.z=.04;g.add(canopy);
     return g;
   }
   function buildBoardroom(T,m){
@@ -3766,26 +3785,27 @@ const FAC3D=(()=>{
   const BUILDERS={pool:buildPool,board:buildBoardroom,kids:buildKids,parking:buildParking,spa:buildSpa,restaurant:buildRestaurant,gym:buildGym,lobby:buildLobby};
 
   function makeMats(T){
-    const wood=woodTex(T), wall=wallTex(T), grass=grassTex(T);
+    const wood=woodTex(T), wall=wallTex(T), grass=grassTex(T), stone=stoneTex(T);
     return {
-      ground:new T.MeshStandardMaterial({map:grass,roughness:.95}),
-      path:new T.MeshStandardMaterial({color:0xBFAE8E,roughness:.9}),
-      stone:new T.MeshStandardMaterial({color:0xD9D2C4,roughness:.8}),
-      wall:new T.MeshStandardMaterial({map:wall,color:0xEDE7DC,roughness:.92}),
-      wood:new T.MeshStandardMaterial({map:wood,roughness:.5,metalness:.05}),
-      darkwood:new T.MeshStandardMaterial({color:0x3B2A1E,roughness:.45,metalness:.1}),
+      ground:new T.MeshStandardMaterial({map:grass,roughness:.95,envMapIntensity:.3}),
+      path:new T.MeshStandardMaterial({map:stone,color:0xBFAE8E,roughness:.85,envMapIntensity:.2}),
+      stone:new T.MeshStandardMaterial({map:stone,color:0xD9D2C4,roughness:.7,envMapIntensity:.4}),
+      wall:new T.MeshStandardMaterial({map:wall,color:0xEDE7DC,roughness:.85,envMapIntensity:.3}),
+      wood:new T.MeshStandardMaterial({map:wood,roughness:.5,metalness:.05,envMapIntensity:.5}),
+      darkwood:new T.MeshStandardMaterial({color:0x3B2A1E,roughness:.4,metalness:.1,envMapIntensity:.6}),
       fabric:new T.MeshStandardMaterial({color:0xC9BFAE,roughness:.92}),
-      metal:new T.MeshStandardMaterial({color:0xC9CCD1,roughness:.22,metalness:.92,envMapIntensity:1.1}),
-      white:new T.MeshStandardMaterial({color:0xF4F1EB,roughness:.85}),
-      black:new T.MeshStandardMaterial({color:0x1A1A1A,roughness:.4,metalness:.3}),
-      gold:new T.MeshStandardMaterial({color:0xC9A85A,roughness:.24,metalness:.9,envMapIntensity:1.2}),
-      green:new T.MeshStandardMaterial({color:0x4A6B4A,roughness:.8}),
-      water:new T.MeshPhysicalMaterial({color:0x2A6B8E,roughness:.08,metalness:.0,transmission:.3,transparent:true,opacity:.82,ior:1.33,clearcoat:1,clearcoatRoughness:.05,envMapIntensity:1.3}),
+      metal:new T.MeshStandardMaterial({color:0xC9CCD1,roughness:.18,metalness:.95,envMapIntensity:1.3}),
+      white:new T.MeshStandardMaterial({color:0xF4F1EB,roughness:.7,envMapIntensity:.3}),
+      black:new T.MeshStandardMaterial({color:0x1A1A1A,roughness:.35,metalness:.4,envMapIntensity:.6}),
+      gold:new T.MeshStandardMaterial({color:0xC9A85A,roughness:.2,metalness:.95,envMapIntensity:1.4}),
+      green:new T.MeshStandardMaterial({color:0x4A6B4A,roughness:.75,envMapIntensity:.3}),
+      water:new T.MeshPhysicalMaterial({color:0x1A8AB5,roughness:.04,metalness:.0,transmission:.65,transparent:true,opacity:.78,ior:1.33,clearcoat:1,clearcoatRoughness:.03,envMapIntensity:1.5}),
     };
   }
-  function grassTex(T){const c=document.createElement('canvas');c.width=c.height=512;const x=c.getContext('2d');const g=x.createLinearGradient(0,0,0,512);g.addColorStop(0,'#6B9A52');g.addColorStop(1,'#5A8245');x.fillStyle=g;x.fillRect(0,0,512,512);for(let i=0;i<6000;i++){const sh=40+Math.random()*40;x.fillStyle=`rgba(${30+Math.random()*30},${60+Math.random()*40},${20+Math.random()*20},${.2+Math.random()*.3})`;x.fillRect(Math.random()*512,Math.random()*512,1,1+Math.random()*2);}for(let i=0;i<200;i++){x.strokeStyle=`rgba(${80+Math.random()*40},${120+Math.random()*40},${50+Math.random()*30},.25)`;x.lineWidth=1;x.beginPath();x.moveTo(Math.random()*512,Math.random()*512);x.lineTo(Math.random()*512,Math.random()*512);x.stroke();}const t=new T.CanvasTexture(c);t.wrapS=t.wrapT=T.RepeatWrapping;t.repeat.set(12,10);t.anisotropy=8;return t;}
-  function woodTex(T){const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d');const g=x.createLinearGradient(0,0,0,256);g.addColorStop(0,'#6B4A2B');g.addColorStop(1,'#5E3F24');x.fillStyle=g;x.fillRect(0,0,256,256);for(let i=0;i<30;i++){x.strokeStyle='rgba(40,25,12,.15)';x.lineWidth=1+Math.random()*2;x.beginPath();x.moveTo(0,i*8);x.lineTo(256,i*8+4);x.stroke();}const t=new T.CanvasTexture(c);t.wrapS=t.wrapT=T.RepeatWrapping;t.repeat.set(2,2);return t;}
-  function wallTex(T){const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');x.fillStyle='#EDE7DC';x.fillRect(0,0,128,128);for(let i=0;i<400;i++){x.fillStyle=`rgba(120,100,70,${Math.random()*.05})`;x.fillRect(Math.random()*128,Math.random()*128,1,1);}const t=new T.CanvasTexture(c);t.wrapS=t.wrapT=T.RepeatWrapping;t.repeat.set(2,2);return t;}
+  function grassTex(T){const c=document.createElement('canvas');c.width=c.height=512;const x=c.getContext('2d');const g=x.createLinearGradient(0,0,0,512);g.addColorStop(0,'#7AA85E');g.addColorStop(1,'#5A8245');x.fillStyle=g;x.fillRect(0,0,512,512);for(let i=0;i<8000;i++){const sh=40+Math.random()*40;x.fillStyle=`rgba(${30+Math.random()*30},${60+Math.random()*40},${20+Math.random()*20},${.2+Math.random()*.3})`;x.fillRect(Math.random()*512,Math.random()*512,1,1+Math.random()*2);}for(let i=0;i<300;i++){x.strokeStyle=`rgba(${80+Math.random()*40},${120+Math.random()*40},${50+Math.random()*30},.25)`;x.lineWidth=1.5;x.beginPath();x.moveTo(Math.random()*512,Math.random()*512);x.lineTo(Math.random()*512,Math.random()*512);x.stroke();}const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;t.wrapS=t.wrapT=T.RepeatWrapping;t.repeat.set(4,3);t.anisotropy=8;return t;}
+  function woodTex(T){const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d');const g=x.createLinearGradient(0,0,0,256);g.addColorStop(0,'#6B4A2B');g.addColorStop(1,'#5E3F24');x.fillStyle=g;x.fillRect(0,0,256,256);for(let i=0;i<30;i++){x.strokeStyle='rgba(40,25,12,.15)';x.lineWidth=1+Math.random()*2;x.beginPath();x.moveTo(0,i*8);x.lineTo(256,i*8+4);x.stroke();}const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;t.wrapS=t.wrapT=T.RepeatWrapping;t.repeat.set(2,2);return t;}
+  function wallTex(T){const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');x.fillStyle='#EDE7DC';x.fillRect(0,0,128,128);for(let i=0;i<400;i++){x.fillStyle=`rgba(120,100,70,${Math.random()*.05})`;x.fillRect(Math.random()*128,Math.random()*128,1,1);}const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;t.wrapS=t.wrapT=T.RepeatWrapping;t.repeat.set(2,2);return t;}
+  function stoneTex(T){const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d');x.fillStyle='#D9D2C4';x.fillRect(0,0,256,256);for(let i=0;i<3000;i++){const sh=Math.random()*30-15;x.fillStyle=`rgba(${200+sh},${195+sh},${185+sh},${.3+Math.random()*.3})`;x.fillRect(Math.random()*256,Math.random()*256,2,2);}for(let i=0;i<80;i++){x.strokeStyle='rgba(150,140,120,.12)';x.lineWidth=1;x.beginPath();x.moveTo(Math.random()*256,Math.random()*256);x.lineTo(Math.random()*256,Math.random()*256);x.stroke();}const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;t.wrapS=t.wrapT=T.RepeatWrapping;t.repeat.set(3,3);return t;}
 
   function makeLabel(T,text,color){
     const c=document.createElement('canvas');c.width=256;c.height=64;const x=c.getContext('2d');
@@ -3797,6 +3817,14 @@ const FAC3D=(()=>{
 
   function create(stage){
     const T=window.THREE;
+    // aggressively clear any stale canvas + WebGL context from previous 3D engine
+    const oldCanvas=stage.querySelector('canvas');
+    if(oldCanvas){
+      try{const gl=oldCanvas.getContext('webgl2')||oldCanvas.getContext('webgl');
+        if(gl&&gl.getExtension('WEBGL_lose_context'))gl.getExtension('WEBGL_lose_context').loseContext();}catch(e){}
+      oldCanvas.remove();
+    }
+    stage.innerHTML='';
     const scene=new T.Scene();scene.fog=new T.Fog(0xBFD4EA,28,72);
     const cam=new T.PerspectiveCamera(45,stage.clientWidth/stage.clientHeight,.1,300);
     const renderer=new T.WebGLRenderer({antialias:true,alpha:true,powerPreference:'high-performance'});
@@ -3815,26 +3843,33 @@ const FAC3D=(()=>{
     const ec=document.createElement('canvas');ec.width=512;ec.height=512;const ex=ec.getContext('2d');
     const eg=ex.createLinearGradient(0,0,0,512);eg.addColorStop(0,'#8DB8E0');eg.addColorStop(.45,'#C8DDF0');eg.addColorStop(.55,'#E8DCC0');eg.addColorStop(1,'#6B8A5A');ex.fillStyle=eg;ex.fillRect(0,0,512,512);
     const sunG=ex.createRadialGradient(380,160,8,380,160,180);sunG.addColorStop(0,'rgba(255,245,220,.95)');sunG.addColorStop(1,'rgba(255,245,220,0)');ex.fillStyle=sunG;ex.fillRect(0,0,512,512);
-    const envTex=new T.CanvasTexture(ec);envTex.mapping=T.EquirectangularReflectionMapping;envMat.map=envTex;
+    const envTex=new T.CanvasTexture(ec);envTex.colorSpace=T.SRGBColorSpace;envTex.mapping=T.EquirectangularReflectionMapping;envMat.map=envTex;
     envScene.add(new T.Mesh(envGeo,envMat));
     const envRT=pmrem.fromScene(envScene,.04);scene.environment=envRT.texture;
     pmrem.dispose();envTex.dispose();envMat.dispose();envGeo.dispose();
 
-    scene.add(new T.AmbientLight(0xFFFFFF,.32));
-    scene.add(new T.HemisphereLight(0xFFF5E0,0x6B7A50,.42));
-    const sun=new T.DirectionalLight(0xFFE9C4,1.25);sun.position.set(16,26,12);sun.castShadow=true;
+    scene.add(new T.AmbientLight(0xFFFFFF,.45));
+    scene.add(new T.HemisphereLight(0xFFF5E0,0x6B7A50,.6));
+    const sun=new T.DirectionalLight(0xFFE9C4,2.2);sun.position.set(16,26,12);sun.castShadow=true;
     sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-34;sun.shadow.camera.right=34;sun.shadow.camera.top=34;sun.shadow.camera.bottom=-34;sun.shadow.camera.near=1;sun.shadow.camera.far=80;sun.shadow.bias=-.0003;sun.shadow.normalBias=.02;scene.add(sun);
-    const fill=new T.DirectionalLight(0xBCD4FF,.18);fill.position.set(-12,14,-8);scene.add(fill);
+    const fill=new T.DirectionalLight(0xBCD4FF,.35);fill.position.set(-12,14,-8);scene.add(fill);
+    const warmFill=new T.PointLight(0xFFD9A0,.4,40,1.5);warmFill.position.set(0,8,0);scene.add(warmFill);
 
     const R={stage,scene,cam,renderer,sun,mats:m,facs:[],staff:[],sel:null,auto:true,camT:{th:.6,ph:.7,tr:32},camC:{th:.6,ph:.7,tr:32},t0:performance.now()};
     cam.position.set(0,14,24);cam.lookAt(0,0,0);
 
-    // ground with grass texture
-    const ground=new T.Mesh(new T.BoxGeometry(46,.2,36),m.ground);ground.position.y=-.1;ground.receiveShadow=true;scene.add(ground);
-    // paths
-    const pathMat=m.path;
-    scene.add(box(T,pathMat,44,.02,2,0,.01,0));
-    scene.add(box(T,pathMat,2,.02,34,0,.01,0));
+    // ground with grass texture — deep base
+    const ground=new T.Mesh(new T.BoxGeometry(46,.4,36),m.ground);ground.position.y=-.2;ground.receiveShadow=true;scene.add(ground);
+    // stone plaza around the central path
+    const plazaMat=new T.MeshStandardMaterial({map:stoneTex(T),color:0xCFC8B8,roughness:.7,envMapIntensity:.3});
+    const plaza=new T.Mesh(new T.BoxGeometry(44,.06,34),plazaMat);plaza.position.y=.01;plaza.receiveShadow=true;scene.add(plaza);
+    // central walkway — warm stone pavers
+    const pathTex=stoneTex(T);pathTex.repeat.set(8,1);
+    const pathMat2=new T.MeshStandardMaterial({map:pathTex,color:0xBFAE8E,roughness:.85,envMapIntensity:.2});
+    scene.add(box(T,pathMat2,44,.04,2.4,0,.03,0));
+    const pathTex2=stoneTex(T);pathTex2.repeat.set(1,8);
+    const pathMat3=new T.MeshStandardMaterial({map:pathTex2,color:0xBFAE8E,roughness:.85,envMapIntensity:.2});
+    scene.add(box(T,pathMat3,2.4,.04,34,0,.03,0));
     for(const f of FACILITIES){
       const grp=new T.Group();grp.position.set(f.pos[0],0,f.pos[2]);
       grp.userData={fac:f};
@@ -3852,13 +3887,30 @@ const FAC3D=(()=>{
       scene.add(grp);
       R.facs.push({grp,f,halo,label,slab});
     }
-    // landscape trees — realistic trunk + layered canopy
-    const trunkGeo=new T.CylinderGeometry(.1,.16,.7,8);
-    const trunkMat=new T.MeshStandardMaterial({color:0x5A3F2A,roughness:.9});
-    for(let i=0;i<24;i++){const tx=(Math.random()-.5)*42,tz=(Math.random()-.5)*32;if(FACILITIES.some(f=>Math.abs(tx-f.pos[0])<f.sz[0]*.7&&Math.abs(tz-f.pos[2])<f.sz[1]*.7))continue;const tree=new T.Group();const trunk=new T.Mesh(trunkGeo,trunkMat);trunk.position.y=.35;trunk.castShadow=true;tree.add(trunk);
-      const green=[0x3E6B3A,0x4A7A42,0x558248];
-      for(let j=0;j<3;j++){const s=.55-j*.08;const leaves=new T.Mesh(new T.SphereGeometry(s,10,9),new T.MeshStandardMaterial({color:green[j%3],roughness:.85}));leaves.position.y=.9+j*.32;leaves.castShadow=true;tree.add(leaves);}
-      tree.position.set(tx,0,tz);tree.rotation.y=Math.random()*Math.PI;scene.add(tree);}
+    // landscape trees — realistic trunk + 3-layer gradient canopy
+    const trunkGeo=new T.CylinderGeometry(.08,.14,.8,8);
+    const trunkMat=new T.MeshStandardMaterial({color:0x5A3F2A,roughness:.85,envMapIntensity:.2});
+    const leafMats=[
+      new T.MeshStandardMaterial({color:0x2E5A2A,roughness:.75,envMapIntensity:.4}),
+      new T.MeshStandardMaterial({color:0x3E6B3A,roughness:.75,envMapIntensity:.4}),
+      new T.MeshStandardMaterial({color:0x5A8A48,roughness:.75,envMapIntensity:.4}),
+    ];
+    for(let i=0;i<28;i++){
+      const tx=(Math.random()-.5)*42,tz=(Math.random()-.5)*32;
+      if(FACILITIES.some(f=>Math.abs(tx-f.pos[0])<f.sz[0]*.7&&Math.abs(tz-f.pos[2])<f.sz[1]*.7))continue;
+      const tree=new T.Group();
+      const trunk=new T.Mesh(trunkGeo,trunkMat);trunk.position.y=.4;trunk.castShadow=true;tree.add(trunk);
+      for(let j=0;j<3;j++){
+        const r=.8-j*.12;
+        const leaves=new T.Mesh(new T.SphereGeometry(r,16,12),leafMats[j]);
+        leaves.position.y=1.1+j*.42;
+        leaves.scale.set(1.1+j*.08,1-j*.08,1.1);
+        leaves.castShadow=true;
+        tree.add(leaves);
+      }
+      const bush=new T.Mesh(new T.SphereGeometry(.3,10,8),leafMats[2]);bush.position.set(0,.15,0);bush.scale.set(1.2,.5,1.2);tree.add(bush);
+      tree.position.set(tx,0,tz);tree.rotation.y=Math.random()*Math.PI;tree.scale.setScalar(.9+Math.random()*.4);scene.add(tree);
+    }
 
     function box(T,mat,w,h,d,x,y,z){const b=new T.Mesh(new T.BoxGeometry(w,h,d),mat);b.position.set(x,y,z);b.receiveShadow=true;return b;}
 
@@ -3931,6 +3983,8 @@ const FAC3D=(()=>{
         const dir=new T.Vector3().subVectors(s.userData.tar,s.position);dir.y=0;
         if(dir.length()>0.02){const sp=.012;s.position.x+=dir.x*sp;s.position.z+=dir.z*sp;s.rotation.y=Math.atan2(dir.x,dir.z);s.userData.phase+=.18;const sw=Math.sin(s.userData.phase)*.5;s.userData.legL.rotation.x=sw;s.userData.legR.rotation.x=-sw;s.userData.armL.rotation.x=-sw;s.userData.armR.rotation.x=sw;s.position.y=Math.abs(Math.sin(s.userData.phase*2))*.02;}
       });
+      // pool water ripple animation
+      R.facs.forEach(F=>{if(F.grp.userData.water){const w=F.grp.userData.water;w.position.y=.22+Math.sin(t*1.8)*.008;w.material.opacity=.7+Math.sin(t*1.2)*.05;}});
       renderer.render(scene,cam);
     }
     tick();
@@ -3950,8 +4004,12 @@ const FAC3D=(()=>{
   function destroy(){
     if(!rt)return;
     cancelAnimationFrame(rt.raf);clearTimeout(rt.autoT);rt.ro&&rt.ro.disconnect();
+    // force WebGL context loss to free GPU resources and avoid context conflicts
+    try{const gl=rt.renderer.getContext();if(gl&&gl.getExtension('WEBGL_lose_context'))gl.getExtension('WEBGL_lose_context').loseContext();}catch(e){}
     rt.scene.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)(Array.isArray(o.material)?o.material:[o.material]).forEach(mm=>{if(mm.map)mm.map.dispose();mm.dispose();});});
-    rt.renderer.dispose();rt.renderer.domElement.remove();rt=null;
+    rt.renderer.dispose();
+    if(rt.renderer.domElement&&rt.renderer.domElement.parentNode)rt.renderer.domElement.parentNode.removeChild(rt.renderer.domElement);
+    rt=null;
   }
   return {boot,destroy,setView:(az,ph)=>{if(rt)rt.setView(az,ph);},selectFacility:(id)=>{if(rt){const f=FACILITIES.find(x=>x.id===id);if(f)rt.select(f);}},facilities:FACILITIES};
 })();
@@ -4347,8 +4405,9 @@ const CT3D=(()=>{
 
   function destroy(){
     if(!rt)return;cancelAnimationFrame(rt.raf);clearTimeout(rt.autoT);rt.ro&&rt.ro.disconnect();
+    try{const gl=rt.renderer.getContext();if(gl&&gl.getExtension('WEBGL_lose_context'))gl.getExtension('WEBGL_lose_context').loseContext();}catch(e){}
     rt.scene.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)(Array.isArray(o.material)?o.material:[o.material]).forEach(mm=>{if(mm.map)mm.map.dispose();mm.dispose();});});
-    rt.renderer.dispose();rt.renderer.domElement.remove();rt=null;
+    rt.renderer.dispose();if(rt.renderer.domElement&&rt.renderer.domElement.parentNode)rt.renderer.domElement.parentNode.removeChild(rt.renderer.domElement);rt=null;
   }
   return {boot,destroy,setView,rooms:TOWER,staff:STAFF};
 })();
@@ -4614,8 +4673,9 @@ const NOV3D=(()=>{
 
   function destroyExterior(){
     if(!rt)return;cancelAnimationFrame(rt.raf);clearTimeout(rt.autoT);rt.ro&&rt.ro.disconnect();
+    try{const gl=rt.renderer.getContext();if(gl&&gl.getExtension('WEBGL_lose_context'))gl.getExtension('WEBGL_lose_context').loseContext();}catch(e){}
     rt.scene.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{if(m.map)m.map.dispose();m.dispose();});});
-    rt.renderer.dispose();rt.renderer.domElement.remove();rt=null;
+    rt.renderer.dispose();if(rt.renderer.domElement&&rt.renderer.domElement.parentNode)rt.renderer.domElement.parentNode.removeChild(rt.renderer.domElement);rt=null;
   }
 
   /* ---------- FLOOR INTERIOR SCENE ---------- */
