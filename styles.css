@@ -1732,7 +1732,7 @@ html[data-mode="ultra"] .tl-now{background:var(--gold-grad)}
   box-shadow:0 40px 90px -30px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.12);
   backdrop-filter:blur(26px) saturate(1.25);-webkit-backdrop-filter:blur(26px) saturate(1.25);
   animation:agRise .6s .12s cubic-bezier(.22,.9,.28,1) both;
-  max-height:100%;overflow-y:auto}
+  overflow:visible}
 @keyframes agRise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
 .ag-mark{width:50px;height:50px;display:grid;place-items:center;border-radius:15px;margin-bottom:16px;
   background:rgba(255,255,255,.09);border:1px solid rgba(242,224,174,.35)}
@@ -1793,16 +1793,85 @@ html[data-theme="light"] .ag-card{
   background:linear-gradient(165deg,rgba(16,24,42,.68),rgba(14,22,40,.58))}
 
 @media (max-width:1060px){
-  .ag-stage{grid-template-columns:1fr;align-items:start;overflow-y:auto;padding-top:6px;padding-bottom:10px}
-  .ag-hero{max-width:620px}
-  .ag-hero p{margin-bottom:22px}
-  .ag-card{max-width:480px;width:100%;margin-bottom:8px}
+  .ag-stage{grid-template-columns:1fr;align-items:center;overflow:visible;
+    gap:20px;padding-top:0;padding-bottom:6px}
+  .ag-hero{max-width:620px;text-align:center;margin:0 auto;width:100%}
+  .ag-hero p{margin:0 auto 20px}
+  .ag-stats{justify-content:center}
+  .ag-card{max-width:460px;width:100%;margin:0 auto}
 }
 @media (max-width:560px){
-  .ag-top{padding:18px 18px 6px}
-  .ag-stage{padding:6px 16px 10px;gap:18px}
-  .ag-hero h2{font-size:25px;margin:10px 0 10px}
-  .ag-hero p{font-size:13px}
-  .ag-stats{gap:18px}
-  .ag-card{padding:28px 22px 22px;border-radius:22px}
+  .ag-top{padding:14px 18px 2px}
+  .ag-stage{padding:0 16px 6px;gap:14px}
+  .ag-hero h2{font-size:22px;margin:8px 0 8px}
+  .ag-hero p{font-size:12.5px;margin-bottom:12px}
+  .ag-stats{gap:20px}
+  .ag-card{padding:24px 20px 18px;border-radius:22px}
+  .ag-foot{padding-bottom:12px}
+}
+
+/* ---- short viewports: compact so the whole sign-in fits, no scroll ---- */
+@media (max-height:900px){
+  .ag-top{padding-top:16px;padding-bottom:10px}
+  .ag-stage{padding-top:0;padding-bottom:10px}
+  .ag-mark{width:44px;height:44px;margin-bottom:12px}
+  .ag-mark svg{width:25px;height:25px}
+  .ag-card{padding:26px 30px 22px;border-radius:22px}
+  .ag-card h1{font-size:26px}
+  .ag-sub{margin-bottom:18px}
+  .ag-field{margin-bottom:11px}
+  .ag-field>span{margin-bottom:6px}
+  .ag-input input{padding-top:11px;padding-bottom:11px}
+  .ag-demo{margin-top:16px;padding-top:12px}
+  .ag-demo>small{margin-bottom:7px}
+  .ag-accounts{gap:5px}
+  .ag-acct{padding:7px 10px}
+  .ag-foot{padding-bottom:12px}
+}
+@media (max-height:760px){
+  .ag-hero p{display:none}
+  .ag-hero h2{margin-bottom:14px}
+  .ag-stats b{font-size:21px}
+  .ag-card{padding:20px 26px 16px}
+  .ag-mark{width:40px;height:40px;margin-bottom:10px;border-radius:12px}
+  .ag-mark svg{width:23px;height:23px}
+  .ag-card h1{font-size:24px;margin-bottom:5px}
+  .ag-sub{margin-bottom:14px}
+  .ag-submit{padding:11px 16px;margin-top:4px}
+  /* demo accounts become a single compact chip row */
+  .ag-demo>small{display:none}
+  .ag-demo{margin-top:13px;padding-top:11px}
+  .ag-accounts{flex-direction:row;gap:6px}
+  .ag-acct{flex:1;justify-content:center;padding:8px 6px;text-align:center}
+  .ag-acct-ic{display:none}
+  .ag-acct-tx{align-items:center}
+  .ag-acct-tx b{font-size:11px;white-space:nowrap}
+  .ag-acct-tx small{display:none}
+  .ag-foot{font-size:10px;padding-bottom:10px}
+}
+@media (max-height:760px) and (max-width:1060px){
+  .ag-hero{display:none}
+  .ag-stage{gap:0}
+}
+@media (max-height:620px){
+  .ag-top{padding-top:10px;padding-bottom:6px}
+  .ag-brand{font-size:16px}
+  .ag-bird{width:30px;height:30px}
+  .ag-bird svg{width:19px;height:19px}
+  .ag-foot{display:none}
+  .ag-card{padding:16px 22px 14px;border-radius:20px}
+  .ag-mark{display:none}
+  .ag-card h1{font-size:22px}
+  .ag-sub{margin-bottom:12px}
+  .ag-field{margin-bottom:9px}
+  .ag-err{padding:7px 10px;margin:2px 0 8px}
+  .ag-demo{margin-top:10px;padding-top:9px}
+  /* when the validation pill is shown, tighten the card so it still fits */
+  .ag-err:not([hidden]){padding:6px 10px;margin:0 0 7px}
+  .ag-card:has(.ag-err:not([hidden])) .ag-sub{margin-bottom:9px}
+  .ag-card:has(.ag-err:not([hidden])) .ag-field:last-of-type{margin-bottom:7px}
+  .ag-card:has(.ag-err:not([hidden])) .ag-submit{margin-top:0}
+  .ag-card:has(.ag-err:not([hidden])) .ag-demo{margin-top:6px;padding-top:7px}
+  .ag-card:has(.ag-err:not([hidden])) .ag-acct{padding-top:6px;padding-bottom:6px}
+  .ag-card:has(.ag-err:not([hidden])){padding-bottom:10px}
 }
