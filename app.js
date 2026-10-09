@@ -77,7 +77,7 @@ const PATHS = {
   power:'<path d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10"/>',
   plusCircle:'<circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/>',
   fileText:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>',
-  pie:'<path d="M21.21 15.89A10 0 1 1 8 2.83M22 12A10 10 0 0 0 12 2v10z"/>',
+  pie:'<path d="M21.21 15.89A10 10 0 1 1 8 2.83M22 12A10 10 0 0 0 12 2v10z"/>',
   layers:'<polygon points="12 2 2 7 12 12 22 7 12 2"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/>',
   database:'<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/>',
   lock:'<rect x="3" y="11" width="18" height="11" rx="2.5"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
